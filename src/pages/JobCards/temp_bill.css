@@ -1,0 +1,117 @@
+/* Bill Preview Styles */
+.billCard {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  padding: 1.5rem;
+  position: sticky;
+  top: 80px;
+}
+
+.billHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed var(--color-divider);
+  margin-bottom: 1rem;
+}
+
+.billTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.billBadge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.billItems {
+  min-height: 150px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.emptyBill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.billItemRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-bg-base);
+}
+
+.billItemName {
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+  font-weight: 500;
+  max-width: 70%;
+  line-height: 1.3;
+}
+
+.billItemName small {
+  color: var(--color-text-muted);
+  margin-left: 0.2rem;
+}
+
+.billItemPrice {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.billSummary {
+  background: var(--color-bg-base);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.grandTotalRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  padding-top: 0.5rem;
+  margin-top: 0.25rem;
+  border-top: 1px dashed var(--color-border);
+}
+
+.serviceName {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.servicePrice {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--color-accent);
+}

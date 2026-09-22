@@ -1,0 +1,171 @@
+.formCard {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  padding: 2rem;
+}
+
+.sectionHeader {
+  margin-bottom: 1.25rem;
+}
+
+.sectionTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sectionTitle::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+  margin-left: 0.75rem;
+}
+
+.divider {
+  height: 1px;
+  background: var(--color-divider);
+  margin: 1.75rem 0;
+}
+
+/* Image Upload */
+.imageUploadArea {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 2.5rem;
+  text-align: center;
+  background: var(--color-bg-base);
+  transition: border-color 0.2s, background 0.2s;
+  cursor: pointer;
+}
+
+.imageUploadArea:hover {
+  border-color: var(--color-accent);
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.uploadIcon {
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.uploadText {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.uploadText span {
+  color: var(--color-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.uploadHint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 1rem;
+}
+
+.uploadBtnRow {
+  display: flex;
+  justify-content: center;
+}
+
+/* Actions */
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-divider);
+  flex-wrap: wrap;
+}
+
+/* List Styles */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.searchBox {
+  flex: 1;
+  min-width: 240px;
+  max-width: 400px;
+}
+
+.tableCard {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.vehicleNum {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg-base);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+
+.exitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1.5px solid var(--bs-danger);
+  background: transparent;
+  color: var(--bs-danger);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+}
+
+.exitBtn:hover {
+  background: var(--bs-danger);
+  color: #fff;
+}
+
+.viewBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1.5px solid var(--bs-primary);
+  background: transparent;
+  color: var(--bs-primary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  margin-right: 8px;
+}
+
+.viewBtn:hover {
+  background: var(--bs-primary);
+  color: #fff;
+}
+
+.dropdownToggleNoCaret::after {
+  display: none !important;
+}
+
