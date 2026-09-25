@@ -25,7 +25,8 @@ import {
   Shield,
   ExternalLink,
   ArrowRight,
-  Clock
+  Clock,
+  Mic
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useJobCard } from '../../queries/useDataQueries';
@@ -40,6 +41,7 @@ export default function JobCardDetailModal({
   isOpen,
   onClose,
   jobCardId,
+  approvalData,
   onAssign
 }) {
   const navigate = useNavigate();
@@ -62,6 +64,10 @@ export default function JobCardDetailModal({
   const complaintText = String(jobCard?.customerComplaint || '').trim();
   const additionalNotesText = String(jobCard?.additionalNotes || '').trim();
   const legacyNotesText = !complaintText && !additionalNotesText ? String(jobCard?.notes || '').trim() : '';
+  const allApprovals = Array.isArray(jobCard?.approvals) && jobCard.approvals.length > 0
+    ? jobCard.approvals
+    : (approvalData ? [approvalData] : []);
+  const validApprovals = allApprovals.filter(a => a && (a.mechanicExplanation || a.mechanic_explanation || a.voiceNoteUrl || a.voice_note_url));
 
   const services = Array.isArray(jobCard?.services) && typeof jobCard.services[0] === 'string'
     ? jobCard.services.map(s => ({ name: s, price: 0, quantity: 1, status: 'PENDING', isAdditional: false }))
@@ -256,6 +262,51 @@ export default function JobCardDetailModal({
                       </Typography>
                     </Box>
                   )}
+                </Box>
+              </Card>
+            )}
+
+            {/* Mechanic Explanation & Recorded Voice Notes Card */}
+            {validApprovals.length > 0 && (
+              <Card sx={{ borderRadius: 3, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -2px rgba(0,0,0,0.02)', border: '1px solid #E2E8F0', bgcolor: '#FFFFFF', overflow: 'hidden' }}>
+                <Box sx={{ p: 2, borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 1.5, bgcolor: '#FFFFFF' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 1.5, bgcolor: '#ECFDF5', color: '#059669' }}>
+                    <Mic size={18} />
+                  </Box>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#0F172A' }}>
+                    Mechanic Explanation & Voice Records ({validApprovals.length})
+                  </Typography>
+                </Box>
+                <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {validApprovals.map((approval, idx) => {
+                    const text = String(approval.mechanicExplanation || approval.mechanic_explanation || '').trim();
+                    const audio = approval.voiceNoteUrl || approval.voice_note_url || null;
+                    return (
+                      <Box key={approval.id || idx} sx={{ p: 2, bgcolor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {approval.approvalCode ? `Approval Request: ${approval.approvalCode}` : `Request #${idx + 1}`}
+                        </Typography>
+                        {text && (
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
+                              Explanation / Note
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#1E293B', bgcolor: '#FFFFFF', p: 1.5, borderRadius: 1.5, border: '1px solid #E2E8F0', whiteSpace: 'pre-wrap' }}>
+                              {text}
+                            </Typography>
+                          </Box>
+                        )}
+                        {audio && (
+                          <Box sx={{ p: 1.5, bgcolor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#047857', display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Mic size={16} /> Recorded Voice Note Audio:
+                            </Typography>
+                            <audio controls src={audio} style={{ width: '100%', height: 40 }} />
+                          </Box>
+                        )}
+                      </Box>
+                    );
+                  })}
                 </Box>
               </Card>
             )}

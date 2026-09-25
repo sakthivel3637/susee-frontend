@@ -11,7 +11,7 @@ import { toastSuccess, toastInfo, toastError } from '../../notifications/toast';
 import { formatDateTime, formatWaitTime } from '../../utils/formatters';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import useAuthStore from '../../store/useAuthStore';
-import { getMechanicalQueueApi, getBodyShopQueueApi, getWaterWashQueueApi, assignQueueWorkApi } from '../../api/queueApi';
+import { getMechanicalQueueApi, getBodyShopQueueApi, assignQueueWorkApi } from '../../api/queueApi';
 import { skipJobCardDepartmentApi } from '../../api/jobCardApi';
 import { getMechanicsDropdownApi } from '../../api/userApi';
 import { adminBayApi } from '../../api/adminBayApi';
@@ -23,19 +23,22 @@ import { usePermissions } from '../../hooks/usePermissions';
 const PRIORITY_COLORS = { LOW: '#10B981', NORMAL: '#3B82F6', HIGH: '#F59E0B', URGENT: '#EF4444' };
 const BAY_TYPE_BY_CATEGORY = {
   mechanical: 'Mechanical',
-  'body-shop': 'Body Shop',
-  'water-wash': 'Water Wash'
+  'body-shop': 'Body Shop'
 };
 
 export default function AssignMechanicList() {
   const queryClient = useQueryClient();
   const { role, user, menus } = useAuthStore();
   const locationId = user?.locationId || user?.location_id || user?.branchId || '';
-  const queueCategory = getDepartmentFromModules(menus) || 'mechanical';
+
+  const detectedDept = getDepartmentFromModules(menus);
+  const showBothTabs = detectedDept !== 'body-shop';
+  const [activeTab, setActiveTab] = useState('mechanical');
+  const queueCategory = showBothTabs ? activeTab : 'body-shop';
+
   const isBodyShop = queueCategory === 'body-shop';
-  const isWaterWash = queueCategory === 'water-wash';
-  const assigneeLabel = isBodyShop ? 'Technician' : isWaterWash ? 'Member' : 'Mechanic';
-  const pageTitle = isBodyShop ? 'Assign Technician (Body Shop)' : isWaterWash ? 'Assign Water Wash Member' : 'Assign Mechanic';
+  const assigneeLabel = isBodyShop ? 'Technician' : 'Mechanic';
+  const pageTitle = showBothTabs ? 'Assign Work' : (isBodyShop ? 'Assign Technician (Body Shop)' : 'Assign Mechanic');
   const { canUpdate } = usePermissions();
   const canAssignWork = canUpdate('/job-cards');
 
@@ -44,13 +47,11 @@ export default function AssignMechanicList() {
   const [search, setSearch] = useState('');
 
   const { data: jobsResponse, isLoading } = useQuery({
-    queryKey: ['assign-mechanic-queue', role, locationId, page, rowsPerPage, search],
+    queryKey: ['assign-mechanic-queue', role, locationId, queueCategory, page, rowsPerPage, search],
     queryFn: async () => {
       const params = { locationId, page: page + 1, limit: rowsPerPage, search };
       if (queueCategory === 'body-shop') {
         return getBodyShopQueueApi(params);
-      } else if (queueCategory === 'water-wash') {
-        return getWaterWashQueueApi(params);
       } else {
         return getMechanicalQueueApi(params);
       }
@@ -59,7 +60,7 @@ export default function AssignMechanicList() {
   });
 
   const { data: mechanicsResponse, isLoading: isMechanicsLoading } = useQuery({
-    queryKey: ['mechanics-dropdown', role, locationId],
+    queryKey: ['mechanics-dropdown', role, locationId, queueCategory],
     queryFn: () => getMechanicsDropdownApi({ locationId, category: queueCategory }),
     enabled: !!role,
     staleTime: 60000
@@ -98,6 +99,10 @@ export default function AssignMechanicList() {
       setSkipModal({ isOpen: false, item: null });
       setSkipReason('');
       await queryClient.invalidateQueries({ queryKey: ['assign-mechanic-queue'] });
+      if (queueCategory === 'mechanical' && showBothTabs) {
+        setActiveTab('body-shop');
+        setPage(0);
+      }
     },
     onError: (error) => toastError(error?.response?.data?.message || error?.message || 'Failed to skip department')
   });
@@ -113,6 +118,7 @@ export default function AssignMechanicList() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['assign-mechanic-queue'] });
       await queryClient.invalidateQueries({ queryKey: ['assignment-bays'] });
+      await queryClient.invalidateQueries({ queryKey: ['job-cards'] });
       setLocalJobs((currentJobs) => currentJobs.filter((job) => {
         const currentJobCardId = job.jobCardId || job.id;
         const assignedJobCardId = assignModal.item?.jobCardId || assignModal.item?.id;
@@ -298,6 +304,47 @@ export default function AssignMechanicList() {
         title={pageTitle}
         breadcrumbs={[{ label: pageTitle }]}
       />
+
+      {/* Department Tabs — shown for floor supervisor */}
+      {showBothTabs && (
+        <Box sx={{ display: 'flex', gap: 1.5, mb: 3, mt: 2 }}>
+          {[
+            { key: 'mechanical', label: 'Mechanical' },
+            { key: 'body-shop', label: 'Body Shop' },
+          ].map((tab) => (
+            <Button
+              key={tab.key}
+              variant={activeTab === tab.key ? 'primary' : 'outlined'}
+              size="sm"
+              onClick={() => {
+                setActiveTab(tab.key);
+                setPage(0);
+                setSearch('');
+              }}
+              sx={{
+                fontWeight: 700,
+                textTransform: 'none',
+                borderRadius: '24px',
+                px: 3,
+                py: 0.8,
+                fontSize: '0.875rem',
+                ...(activeTab === tab.key ? {
+                  bgcolor: '#1E40AF',
+                  color: '#FFFFFF',
+                  '&:hover': { bgcolor: '#1E3A8A' }
+                } : {
+                  borderColor: '#CBD5E1',
+                  color: '#475569',
+                  bgcolor: '#FFFFFF',
+                  '&:hover': { bgcolor: '#F8FAFC', borderColor: '#94A3B8' }
+                })
+              }}
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </Box>
+      )}
 
       <Box sx={{ display: 'flex', gap: 2, mb: 3, mt: 3, flexWrap: 'wrap' }}>
         <Box sx={{ width: { xs: '100%', md: 350 } }}>

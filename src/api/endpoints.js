@@ -66,7 +66,6 @@ export const ENDPOINTS = {
   QUEUES: {
     MECHANICAL: '/queues/mechanical/list',
     BODY_SHOP: '/queues/body-shop/list',
-    WATER_WASH: '/queues/water-wash/list',
     UPDATE_STATUS: (id) => `/queues/status/${id}`,
     ASSIGN: (id) => `/queues/assign/${id}`,
     REASSIGN: (id) => `/queues/reassign/${id}`
@@ -80,7 +79,6 @@ export const ENDPOINTS = {
     MD: '/dashboard/md',
     SUPERVISOR: '/dashboard/supervisor',
     BODY_SHOP: '/dashboard/body-shop',
-    WATER_WASH: '/dashboard/water-wash',
     RECENT_JOBS: '/dashboard/recent-jobs',
     QUEUE_SUMMARY: '/dashboard/queue-summary',
   },

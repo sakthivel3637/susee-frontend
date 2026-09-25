@@ -17,14 +17,11 @@ const INITIAL_SERVICES = [
   { id: 'S5', name: 'Tyre Rotation & Alignment', price: 800, category: 'Mechanical', estimatedMinutes: 45 },
   { id: 'S6', name: 'Battery Replacement', price: 4500, category: 'Mechanical', estimatedMinutes: 15 },
   { id: 'S7', name: 'Body Dent & Paint (Per Panel)', price: 3000, category: 'Body Shop', estimatedMinutes: 240 },
-  { id: 'S8', name: 'Premium Water Wash', price: 600, category: 'Water Wash', estimatedMinutes: 45 },
-  { id: 'S9', name: 'Interior Detailing', price: 1500, category: 'Water Wash', estimatedMinutes: 90 },
 ];
 
 const INITIAL_CATEGORIES = [
   { id: 'C1', name: 'Mechanical', description: 'Mechanical maintenance and repairs' },
-  { id: 'C2', name: 'Body Shop', description: 'Denting, painting and panel work' },
-  { id: 'C3', name: 'Water Wash', description: 'Washing and interior detailing' }
+  { id: 'C2', name: 'Body Shop', description: 'Denting, painting and panel work' }
 ];
 
 const INITIAL_STATES = [
@@ -312,7 +309,7 @@ const useMasterDataStore = create(
         })),
     }),
     {
-      name: 'dvsos-master-data-v3',
+      name: 'dvsos-master-data-v4',
     }
   )
 );

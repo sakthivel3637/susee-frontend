@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Card, Typography, IconButton, Menu, MenuItem, Select, Chip } from '@mui/material';
+import { Box, Card, Typography, IconButton, Menu, MenuItem, Select, Chip, Tabs, Tab } from '@mui/material';
 import DataTable from '../../components/common/DataTable';
 import { Plus, Eye, Edit, MoreVertical, PlusCircle, MessageCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import { useJobCards, useJobCardStatuses } from '../../queries/useDataQueries';
@@ -44,21 +44,39 @@ export default function JobCardList() {
   const canCreateFloorAdditionalWork = canCreate('/additional-work');
   const canCreateBodyShopAdditionalWork = canCreate('/body-shop-additional-work');
   const department = getDepartmentFromModules(menus);
-  const canCreateJobCard = canCreateJobCards && !['body-shop', 'water-wash'].includes(department);
-  const departmentFilter = ['body-shop', 'water-wash'].includes(department) ? department : undefined;
+  const canCreateJobCard = canCreateJobCards && department !== 'body-shop';
+  const departmentFilter = department === 'body-shop' ? department : undefined;
+
+  // Tab switch — sends status codes to backend; works correctly with server-side pagination
+  const TAB_STATUS_CODES = {
+    mechanic:  'MECHANICAL_ASSIGNED,MECHANICAL_IN_PROGRESS',
+    bodyshop:  'BODY_SHOP_ASSIGNED,BODY_SHOP_IN_PROGRESS',
+    delivery:  'READY_FOR_DELIVERY,READY_FOR_DELIVERED',
+  };
+  // Mechanic & Body Shop tabs sort by most recently assigned; Delivery tab sorts by creation date
+  const TAB_SORT_BY = {
+    mechanic: 'assignedAt',
+    bodyshop: 'assignedAt',
+    delivery: 'createdAt',
+  };
+  const [activeTab, setActiveTab] = useState('mechanic');
+  // When the status dropdown is used, it overrides the tab filter
+  const tabStatusParam = statusFilter ? statusFilter : TAB_STATUS_CODES[activeTab];
+  const tabSortBy = TAB_SORT_BY[activeTab];
 
   const { data: statusesData } = useJobCardStatuses();
   const jobCardStatuses = statusesData || [];
 
   const { data, isLoading } = useJobCards({
     search: debouncedSearch,
-    status: statusFilter,
+    status: tabStatusParam,
     department: departmentFilter,
     page: page + 1,
     limit: rowsPerPage,
     fromDate,
     toDate,
-    sortOrder
+    sortOrder,
+    sortBy: tabSortBy,
   });
 
   const [anchorEl, setAnchorEl] = useState(null);
@@ -80,6 +98,7 @@ export default function JobCardList() {
     setStatusFilter('');
     setFromDate('');
     setToDate('');
+    setActiveTab('mechanic');
     setPage(0);
   };
 
@@ -88,7 +107,23 @@ export default function JobCardList() {
       header: 'Job Card',
       accessor: 'jobCardNo',
       render: (row) => (
-        <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 600,
+            color: '#2563eb',
+            cursor: 'pointer',
+            '&:hover': { textDecoration: 'underline' }
+          }}
+          onClick={() => {
+            const statusCode = String(row.currentStatus?.statusCode || row.currentStatus?.code || '').toUpperCase();
+            if (canUpdateJobCards && !['READY_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_DELIVERED', 'VEHICLE_DELIVERED'].includes(statusCode)) {
+              navigate(`${ROUTES.JOB_CARDS}/edit/${row.slug || row.id}`);
+            } else {
+              navigate(`${ROUTES.JOB_CARDS}/view/${row.slug || row.id}`);
+            }
+          }}
+        >
           {row.jobCardNo}
         </Typography>
       ),
@@ -103,6 +138,41 @@ export default function JobCardList() {
     { header: 'Mobile Number', render: (row) => row.customer?.mobileNo || '-' },
 
     { header: 'Status', render: (row) => <StatusBadge status={row.currentStatus?.statusCode || 'PENDING'} /> },
+    {
+      header: 'WORK TYPE',
+      accessor: 'workType',
+      render: (row) => {
+        const type = row.workType || 'Mechanic';
+
+        let chipBg = '#eff6ff';
+        let chipColor = '#1d4ed8';
+        let chipBorder = '#bfdbfe';
+
+        if (type === 'Both') {
+          chipBg = '#f3e8ff';
+          chipColor = '#7e22ce';
+          chipBorder = '#d8b4fe';
+        } else if (type === 'Body Shop') {
+          chipBg = '#fff7ed';
+          chipColor = '#c2410c';
+          chipBorder = '#ffedd5';
+        }
+
+        return (
+          <Chip
+            label={type}
+            size="small"
+            sx={{
+              bgcolor: chipBg,
+              color: chipColor,
+              border: `1px solid ${chipBorder}`,
+              fontWeight: 600,
+              borderRadius: '9999px'
+            }}
+          />
+        );
+      }
+    },
     {
       header: 'MECHANIC',
       accessor: 'technician',
@@ -164,14 +234,6 @@ export default function JobCardList() {
       ),
       render: (row) => <Typography variant="body2">{formatDateTime(row.createdAt)}</Typography>
     },
-    ...(canReadJobCards || canUpdateJobCards || canCreateFloorAdditionalWork || canCreateBodyShopAdditionalWork ? [{
-      header: 'Actions',
-      render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
-      ),
-    }] : []),
   ];
 
   const tableData = data?.data || [];
@@ -187,6 +249,63 @@ export default function JobCardList() {
       //   </Button>
       // ) : null}
       />
+
+      {/* Tab Switch — server-side status filter, pagination stays correct */}
+      <Box sx={{ borderBottom: '2px solid #E2E8F0', mb: 3 }}>
+        <Tabs
+          value={activeTab}
+          onChange={(e, val) => { setActiveTab(val); setStatusFilter(''); setPage(0); }}
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{
+            '& .MuiTab-root': {
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              textTransform: 'none',
+              minWidth: 160,
+              py: 1.4,
+            },
+            '& .MuiTabs-indicator': { height: 3, borderRadius: '3px 3px 0 0' },
+          }}
+        >
+          <Tab
+            value="mechanic"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+               Mechanic Work
+                {activeTab === 'mechanic' && (
+                  <Chip label={data?.meta?.total ?? 0} size="small"
+                    sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#2563eb', color: '#fff' }} />
+                )}
+              </Box>
+            }
+          />
+          <Tab
+            value="bodyshop"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+              Body Shop Work
+                {activeTab === 'bodyshop' && (
+                  <Chip label={data?.meta?.total ?? 0} size="small"
+                    sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#c2410c', color: '#fff' }} />
+                )}
+              </Box>
+            }
+          />
+          <Tab
+            value="delivery"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+             Ready for Delivery
+                {activeTab === 'delivery' && (
+                  <Chip label={data?.meta?.total ?? 0} size="small"
+                    sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#047857', color: '#fff' }} />
+                )}
+              </Box>
+            }
+          />
+        </Tabs>
+      </Box>
 
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
         <Box sx={{ width: { xs: '100%', md: 350 } }}>
@@ -300,25 +419,24 @@ export default function JobCardList() {
         {(canCreateFloorAdditionalWork || canCreateBodyShopAdditionalWork) &&
           !['COMPLETED', 'READY_FOR_DELIVERY', 'DELIVERED', 'REJECTED'].includes(selectedJob?.currentStatus?.statusCode) && (
             (() => {
-              const isRestricted = ['body-shop', 'water-wash', 'mechanical'].includes(department);
+              const isRestricted = ['body-shop', 'mechanical'].includes(department);
               const targetDepartment = (department === 'body-shop' || (!canCreateFloorAdditionalWork && canCreateBodyShopAdditionalWork)) ? 'body-shop' : 'mechanical';
-              
+
               const jcStatus = String(selectedJob?.currentStatus?.statusCode || '').toUpperCase();
 
               if (isRestricted) {
-                if (targetDepartment === 'mechanical' && (jcStatus.includes('BODY_SHOP') || jcStatus.includes('WATER_WASH'))) return false;
+                if (targetDepartment === 'mechanical' && jcStatus.includes('BODY_SHOP')) return false;
                 if (targetDepartment === 'body-shop' && !jcStatus.includes('BODY_SHOP')) return false;
-                if (targetDepartment === 'water-wash' && !jcStatus.includes('WATER_WASH')) return false;
               }
 
               const assignments = selectedJob?.workAssignments || [];
 
               if (assignments.length > 0) {
-                const relevantAssignments = isRestricted 
+                const relevantAssignments = isRestricted
                   ? assignments.filter(a => {
-                      const cat = a.jobCardService?.serviceItem?.category?.slug || a.jobCardService?.serviceItem?.category?.name || a.service?.category?.slug || a.service?.category?.name || '';
-                      return String(cat).toLowerCase().replace(/[\s_]+/g, '-') === targetDepartment;
-                    })
+                    const cat = a.jobCardService?.serviceItem?.category?.slug || a.jobCardService?.serviceItem?.category?.name || a.service?.category?.slug || a.service?.category?.name || '';
+                    return String(cat).toLowerCase().replace(/[\s_]+/g, '-') === targetDepartment;
+                  })
                   : assignments;
 
                 if (relevantAssignments.length === 0) return false;

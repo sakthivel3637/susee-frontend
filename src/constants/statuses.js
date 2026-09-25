@@ -9,7 +9,6 @@ export const STATUS = {
   READY: 'READY',
   DELIVERED: 'DELIVERED',
   BODY_SHOP: 'BODY_SHOP',
-  WATER_WASH: 'WATER_WASH',
   CANCELLED: 'CANCELLED',
 };
 
@@ -24,7 +23,6 @@ export const STATUS_LABELS = {
   READY: 'Ready for Delivery',
   DELIVERED: 'Delivered',
   BODY_SHOP: 'Body Shop',
-  WATER_WASH: 'Water Wash',
   CANCELLED: 'Cancelled',
   MECHANICAL_ASSIGNED: 'Mechanical Assigned',
   READY_FOR_DELIVERY: 'Ready for Delivery',
@@ -46,7 +44,6 @@ export const STATUS_VARIANTS = {
   READY: 'primary',
   DELIVERED: 'secondary',
   BODY_SHOP: 'pink',
-  WATER_WASH: 'teal',
   CANCELLED: 'secondary',
   MECHANICAL_ASSIGNED: 'info',
   READY_FOR_DELIVERY: 'primary',

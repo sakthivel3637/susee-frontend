@@ -18,7 +18,6 @@ import JobCardCreate from '../pages/JobCards/JobCardCreate';
 import JobCardList from '../pages/JobCards/JobCardList';
 import MechanicalQueue from '../pages/WorkQueue/MechanicalQueue';
 import BodyShopQueue from '../pages/WorkQueue/BodyShopQueue';
-import WaterWashQueue from '../pages/WorkQueue/WaterWashQueue';
 import UserList from '../pages/Users/UserList';
 
 
@@ -59,12 +58,9 @@ export default function AppRoutes() {
         <Route path="/job-cards/create" element={<JobCardCreate />} />
         <Route path="/work-queue/mechanical" element={<MechanicalQueue />} />
 
-        {/* Body Shop & Water Wash Routes */}
+        {/* Body Shop Routes */}
         <Route path="/body-shop/dashboard" element={<Navigate to="/work-queue/body-shop" replace />} />
         <Route path="/work-queue/body-shop" element={<BodyShopQueue />} />
-
-        <Route path="/water-wash/dashboard" element={<Navigate to="/work-queue/water-wash" replace />} />
-        <Route path="/work-queue/water-wash" element={<WaterWashQueue />} />
 
         <Route path="/users" element={<UserList />} />
 

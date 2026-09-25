@@ -55,10 +55,6 @@ import BodyShopJobDetailPage from '../pages/WorkQueue/BodyShopQueue';
 import BodyShopAssignMechanicPage from '../pages/WorkQueue/AssignMechanicList';
 import BodyShopAdditionalWorkPage from '../pages/AdditionalWork/BodyShopAdditionalWorkList';
 import BodyShopCreateRequestPage from '../pages/AdditionalWork/BodyShopCreateRequest';
-import WaterWashDashboardPage from '../pages/WorkQueue/WaterWashQueue';
-import WaterWashQueuePage from '../pages/WorkQueue/WaterWashQueue';
-import WaterWashAssignMemberPage from '../pages/WorkQueue/AssignMechanicList';
-import WashJobDetailPage from '../pages/WorkQueue/WaterWashQueue';
 import ManagerDashboardPage from '../pages/Dashboard/ManagerDashboard';
 import MdDashboardPage from '../pages/Dashboard/MDDashboard';
 import MdStageSchedules from '../pages/Schedules/StageSchedules';
@@ -232,15 +228,6 @@ export const router = createBrowserRouter([
           {
             element: <ProtectedRoute enforcePath />,
             children: [
-              { path: 'water-wash-dashboard', element: <WaterWashDashboardPage /> },
-              { path: 'water-wash-queue', element: <WaterWashQueuePage /> },
-              { path: 'water-wash-assign-member', element: <WaterWashAssignMemberPage /> },
-              { path: 'water-wash-jobs/:id', element: <WashJobDetailPage /> },
-            ],
-          },
-          {
-            element: <ProtectedRoute enforcePath />,
-            children: [
               { path: 'manager-dashboard', element: <ManagerDashboardPage /> },
               { path: 'operations', element: <Navigate to={ROUTES.MANAGER_DASHBOARD} replace /> },
               { path: 'users', element: <UserManagementPage /> },
@@ -295,8 +282,6 @@ export const router = createBrowserRouter([
           { path: 'work-queue/mechanical', element: <Navigate to={ROUTES.FLOOR_MECHANICAL_QUEUE} replace /> },
           { path: 'work-queue/body-shop', element: <Navigate to={ROUTES.BODY_SHOP_DASHBOARD} replace /> },
           { path: 'body-shop/dashboard', element: <Navigate to={ROUTES.BODY_SHOP_DASHBOARD} replace /> },
-          { path: 'work-queue/water-wash', element: <Navigate to={ROUTES.WATER_WASH_QUEUE} replace /> },
-          { path: 'water-wash/dashboard', element: <Navigate to={ROUTES.WATER_WASH_DASHBOARD} replace /> },
         ],
       },
     ],

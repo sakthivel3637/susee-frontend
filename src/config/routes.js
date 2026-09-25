@@ -64,11 +64,6 @@ export const ROUTES = {
   BODY_SHOP_ADDITIONAL_WORK: '/body-shop-additional-work',
   BODY_SHOP_ADDITIONAL_WORK_NEW: '/body-shop-additional-work/new',
 
-  WATER_WASH_DASHBOARD: '/water-wash-dashboard',
-  WATER_WASH_QUEUE: '/water-wash-queue',
-  WATER_WASH_ASSIGN_MEMBER: '/water-wash-assign-member',
-  WATER_WASH_JOB: '/water-wash-jobs',
-
   MANAGER_DASHBOARD: '/manager-dashboard',
   MANAGER_PENDING_APPROVALS: '/pending-approvals',
 
