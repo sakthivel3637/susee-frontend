@@ -1,7 +1,7 @@
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Grid, Typography, Divider, Card, CardContent, Checkbox, FormControlLabel, IconButton, Chip, TextField, MenuItem } from '@mui/material';
-import { Save, Search, MessageCircle, ArrowLeft, X, Plus, UserPlus } from 'lucide-react';
+import { Save, Search, MessageCircle, ArrowLeft, X, Plus, UserPlus, PlusCircle } from 'lucide-react';
 import Button from '../../components/common/Button';
 import BackButton from '../../components/common/BackButton';
 import Modal from '../../components/common/Modal';
@@ -33,8 +33,8 @@ const PRIORITY_OPTIONS = [
 
 const BAY_TYPE_BY_CATEGORY = {
   mechanical: 'Mechanical',
-  'body-shop': 'Body Shop',
-  'water-wash': 'Water Wash'
+  'body-shop': 'Body Shop'
+
 };
 
 export default function JobCardCreate() {
@@ -60,7 +60,6 @@ export default function JobCardCreate() {
   const roleCategoryMap = {
     mechanical: 'Mechanical',
     'body-shop': 'Body Shop',
-    'water-wash': 'Water Wash',
   };
   const restrictedCategory = roleCategoryMap[moduleDepartment];
 
@@ -262,18 +261,21 @@ export default function JobCardCreate() {
     const normalized = normalizeDepartment(service?.category || service?.serviceItem?.category?.name || service?.serviceItem?.category?.slug);
     if (['mechanical', 'mechanic', 'mechnanic', 'floor'].includes(normalized)) return 'mechanical';
     if (['body-shop', 'bodyshop', 'paint', 'denting'].includes(normalized)) return 'body-shop';
-    if (['water-wash', 'wash'].includes(normalized)) return 'water-wash';
     return '';
   };
 
   const getRoleDepartment = () => {
-    if (hasReadableModule(menus, ['admin', 'manager', 'managing-director'])) return 'all';
+    if (hasReadableModule(menus, ['admin', 'manager', 'managing-director', 'floor-supervisor', 'floor_supervisor'])) return 'all';
     if (moduleDepartment) return moduleDepartment;
-    return '';
+    return 'all';
   };
 
   const getServiceStatusCode = (service) => {
-    const currentStatus = serviceStatusOptions.find((status) => status.value === String(service.serviceStatusId || ''));
+    const selectedValue = service?.jobCardServiceId ? serviceStatusValues[service.jobCardServiceId] : null;
+    const statusId = (selectedValue !== undefined && selectedValue !== null && selectedValue !== '')
+      ? String(selectedValue)
+      : String(service?.serviceStatusId || '');
+    const currentStatus = serviceStatusOptions.find((status) => String(status.value) === String(statusId));
     return String(currentStatus?.code || service?.serviceStatusCode || '').trim().toUpperCase();
   };
 
@@ -288,7 +290,7 @@ export default function JobCardCreate() {
   };
 
   const arePreviousDepartmentsCompleted = (department) => {
-    const order = ['mechanical', 'body-shop', 'water-wash'];
+    const order = ['mechanical', 'body-shop'];
     const departmentIndex = order.indexOf(department);
     const previousDepartments = order.slice(0, departmentIndex);
 
@@ -300,11 +302,11 @@ export default function JobCardCreate() {
 
   const canEditServiceStatus = (service) => {
     const roleDepartment = getRoleDepartment();
-    if (roleDepartment === 'all') return true;
+    if (roleDepartment === 'all') return !isServiceCompleted(service);
 
     const serviceDepartment = getServiceDepartment(service);
     return Boolean(roleDepartment)
-      && roleDepartment === serviceDepartment
+      && (roleDepartment === serviceDepartment || roleDepartment === 'all')
       && arePreviousDepartmentsCompleted(serviceDepartment)
       && !isServiceCompleted(service);
   };
@@ -314,7 +316,6 @@ export default function JobCardCreate() {
     const normalized = normalizeDepartment(category?.slug || category?.name);
     if (['mechanical', 'mechanic', 'mechnanic', 'floor'].includes(normalized)) return 'mechanical';
     if (['body-shop', 'bodyshop', 'paint', 'denting'].includes(normalized)) return 'body-shop';
-    if (['water-wash', 'wash'].includes(normalized)) return 'water-wash';
     return '';
   };
 
@@ -516,7 +517,13 @@ export default function JobCardCreate() {
       if (isEditMode) {
         await updateJobCardApi(jobCardIdentifier, {
           serviceStatuses: selectedServices
-            .filter((service) => canEditServiceStatus(service) && service.jobCardServiceId && serviceStatusValues[service.jobCardServiceId])
+            .filter((service) => {
+              if (!service.jobCardServiceId) return false;
+              const currentVal = serviceStatusValues[service.jobCardServiceId];
+              if (!currentVal) return false;
+              const initialVal = service.serviceStatusId ? String(service.serviceStatusId) : '';
+              return String(currentVal) !== initialVal;
+            })
             .map((service) => ({
               jobCardServiceId: service.jobCardServiceId,
               statusId: Number(serviceStatusValues[service.jobCardServiceId])
@@ -639,9 +646,28 @@ export default function JobCardCreate() {
               </Card>
 
               <Card sx={{ borderRadius: 3, boxShadow: 0, p: 3, mb: 4 }}>
-                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 3 }}>
-                  Service Configuration & Master List
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Service Configuration & Master List
+                  </Typography>
+                  {isEditMode && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="small"
+                      leftIcon={PlusCircle}
+                      onClick={() => {
+                        const jcStatus = String(jobCard?.currentStatus?.statusCode || jobCard?.currentStatus?.code || '').toUpperCase();
+                        const isBodyShopProcess = jcStatus.includes('BODY_SHOP') || assignmentCategory === 'body-shop';
+                        const categoryParam = isBodyShopProcess ? 'body-shop' : 'mechanical';
+                        const jobCardIdParam = encodeURIComponent(jobCard?.jobCardNo || jobCardIdentifier);
+                        navigate(`/additional-work/new?jobCardId=${jobCardIdParam}&category=${categoryParam}`);
+                      }}
+                    >
+                      Add Additional Work
+                    </Button>
+                  )}
+                </Box>
 
                 {!isEditMode && (
                   <Grid container spacing={3} sx={{ mb: 4 }}>

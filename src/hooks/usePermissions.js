@@ -17,7 +17,7 @@ export const usePermissions = () => {
   const canManageUsers = () => hasPath('/users');
   const canViewReports = () => hasPath('/reports');
   const canAccessMasters = () => hasModule('admin');
-  const canAssignWork = () => hasPath('/assign-mechanic') || hasPath('/body-shop-assign-mechanic') || hasPath('/water-wash-assign-member');
+  const canAssignWork = () => hasPath('/assign-mechanic') || hasPath('/body-shop-assign-mechanic');
 
   return {
     role,

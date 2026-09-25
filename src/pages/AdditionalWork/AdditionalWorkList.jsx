@@ -27,7 +27,7 @@ const getServiceNames = (request) => {
 
 export function AdditionalWorkRequestListScreen({
   title = 'Additional Work Requests',
-  category = 'mechanical',
+  category = '',
   createRoute = ROUTES.FLOOR_ADDITIONAL_WORK_NEW,
   permissionPath = '/additional-work'
 }) {
@@ -45,7 +45,7 @@ export function AdditionalWorkRequestListScreen({
   const { data: payload, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['additional-work-requests', category, debouncedSearch, statusFilter, page, rowsPerPage],
     queryFn: () => getAdditionalWorkRequestsApi({
-      category,
+      ...(category ? { category } : {}),
       search: debouncedSearch,
       status: statusFilter,
       page: page + 1,
@@ -171,7 +171,7 @@ export function AdditionalWorkRequestListScreen({
           onRowDoubleClick={(row) => {
             const jobCardId = row.jobCardId || row.id || row.jobCardNo;
             if (jobCardId) {
-              setDetailModal({ isOpen: true, jobCardId });
+              setDetailModal({ isOpen: true, jobCardId, approvalData: row });
             }
           }}
         />
@@ -180,7 +180,8 @@ export function AdditionalWorkRequestListScreen({
       <JobCardDetailModal
         isOpen={detailModal.isOpen}
         jobCardId={detailModal.jobCardId}
-        onClose={() => setDetailModal({ isOpen: false, jobCardId: null })}
+        approvalData={detailModal.approvalData}
+        onClose={() => setDetailModal({ isOpen: false, jobCardId: null, approvalData: null })}
       />
     </Box>
   );

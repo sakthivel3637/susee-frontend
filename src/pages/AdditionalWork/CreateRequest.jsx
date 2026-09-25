@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Card, Checkbox, Chip, Divider, FormControlLabel, Grid, TextField, Typography, } from '@mui/material';
-import { ArrowLeft, Car, ClipboardList, MessageCircle, Send, Wrench, } from 'lucide-react';
+import { ArrowLeft, Car, ClipboardList, MessageCircle, MessageSquare, Mic, Send, Wrench, } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Loader from '../../components/common/Loader';
 import PageHeader from '../../components/shared/PageHeader';
@@ -86,29 +86,261 @@ function FieldLabel({ children, required = false }) {
   );
 }
 
+function LiveVoiceRecorder({ onRecorded, onClear, recorderRef }) {
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const timerRef = useRef(null);
+  const streamRef = useRef(null);
+
+  const stopRecordingInternal = () => {
+    return new Promise((resolve) => {
+      if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') {
+        setIsRecording(false);
+        if (timerRef.current) clearInterval(timerRef.current);
+        resolve(null);
+        return;
+      }
+
+      mediaRecorderRef.current.onstop = () => {
+        setIsRecording(false);
+        if (timerRef.current) clearInterval(timerRef.current);
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const previewUrl = URL.createObjectURL(audioBlob);
+        setAudioPreviewUrl(previewUrl);
+
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          onRecorded(reader.result, previewUrl);
+          resolve(reader.result);
+        };
+
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+        }
+      };
+
+      mediaRecorderRef.current.stop();
+    });
+  };
+
+  useEffect(() => {
+    if (recorderRef) {
+      recorderRef.current = {
+        isRecording: () => isRecording,
+        stopAndGetAudio: stopRecordingInternal,
+      };
+    }
+  });
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toastError('Live microphone recording is not supported in this browser environment.');
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      audioChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        setIsRecording(false);
+        if (timerRef.current) clearInterval(timerRef.current);
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const previewUrl = URL.createObjectURL(audioBlob);
+        setAudioPreviewUrl(previewUrl);
+
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          onRecorded(reader.result, previewUrl);
+        };
+
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+        }
+      };
+
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      toastError('Microphone permission is required to record voice notes.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      stopRecordingInternal();
+    }
+  };
+
+  const resetRecording = () => {
+    setAudioPreviewUrl(null);
+    setRecordingSeconds(0);
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+    }
+    onClear();
+  };
+
+  const formatTimer = (sec) => {
+    const mins = Math.floor(sec / 60);
+    const secs = sec % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  return (
+    <Box sx={{ p: 2, bgcolor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Mic size={18} color="#059669" /> Live Voice Note Recorder
+      </Typography>
+
+      {!isRecording && !audioPreviewUrl && (
+        <Button
+          type="button"
+          onClick={startRecording}
+          sx={{
+            height: 44,
+            bgcolor: '#DC2626',
+            color: '#FFFFFF',
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            borderRadius: '6px',
+            textTransform: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            boxShadow: '0 2px 4px rgba(220,38,38,0.25)',
+            '&:hover': { bgcolor: '#B91C1C' }
+          }}
+        >
+          <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#FFFFFF' }} />
+          Click to Record
+        </Button>
+      )}
+
+      {isRecording && (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#FEF2F2', border: '1px solid #FCA5A5', p: 1.5, borderRadius: '6px' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#DC2626' }} />
+            <Typography variant="body2" sx={{ fontWeight: 800, color: '#991B1B' }}>
+              Recording live... {formatTimer(recordingSeconds)}
+            </Typography>
+          </Box>
+          <Button
+            type="button"
+            onClick={stopRecording}
+            sx={{
+              bgcolor: '#0F172A',
+              color: '#FFFFFF',
+              fontWeight: 700,
+              fontSize: '0.8rem',
+              px: 2,
+              py: 0.75,
+              borderRadius: '4px',
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#334155' }
+            }}
+          >
+            Stop Recording
+          </Button>
+        </Box>
+      )}
+
+      {audioPreviewUrl && !isRecording && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 800, color: '#059669' }}>
+            Recorded Audio Preview:
+          </Typography>
+          <audio controls src={audioPreviewUrl} style={{ width: '100%', height: 38 }} />
+          <Button
+            type="button"
+            onClick={resetRecording}
+            sx={{
+              color: '#DC2626',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+              alignSelf: 'flex-start',
+              p: 0,
+              textTransform: 'none',
+              '&:hover': { textDecoration: 'underline', bgcolor: 'transparent' }
+            }}
+          >
+            Re-record Voice Note
+          </Button>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 export function AdditionalWorkRequestScreen({
-  domainLabel = 'Additional Work',
-  defaultCategory = 'Mechanical',
+  domainLabel,
+  defaultCategory = 'mechanical',
   listRoute = ROUTES.FLOOR_ADDITIONAL_WORK,
   backRoute = ROUTES.JOB_CARDS,
-  emptyMessage = 'Open a job card from the Job Cards action menu to create additional work against that vehicle.',
-  subtitle = 'Review the vehicle, current job card, then send one approval batch for the extra work.',
-  successMessage = 'Additional work approved successfully.',
-  sendButtonLabel = 'Approve Additional Work',
-  vehicleSectionTitle = 'Vehicle and Customer Details',
-  currentItemsTitle = 'Current Job Card Items',
-  assigneeLabel = 'Mechanic',
-  additionalBillLabel = 'Additional Work',
+  emptyMessage,
+  subtitle,
+  successMessage,
+  sendButtonLabel,
+  vehicleSectionTitle,
+  currentItemsTitle,
+  assigneeLabel,
+  additionalBillLabel,
 }) {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const jobCardId = searchParams.get('jobCardId');
+  const categoryParam = searchParams.get('category') || searchParams.get('department') || defaultCategory;
+
   const { data: contextPayload, isLoading } = useQuery({
-    queryKey: ['additional-work-context', jobCardId, defaultCategory],
-    queryFn: () => getAdditionalWorkContextApi(jobCardId, { category: defaultCategory }),
+    queryKey: ['additional-work-context', jobCardId, categoryParam],
+    queryFn: () => getAdditionalWorkContextApi(jobCardId, { category: categoryParam }),
     enabled: Boolean(jobCardId),
   });
   const context = normalizePayload(contextPayload);
+  const activeDepartment = String(context?.department || categoryParam || 'mechanical').toLowerCase();
+  const isBodyShopDept = activeDepartment === 'body-shop' || activeDepartment === 'bodyshop';
+
+  const resolvedDomainLabel = domainLabel || (isBodyShopDept ? 'Body Shop Additional Work' : 'Additional Work');
+  const resolvedSendButtonLabel = sendButtonLabel || (isBodyShopDept ? 'Approve Body Shop Work' : 'Approve Additional Work');
+  const resolvedBillLabel = additionalBillLabel || (isBodyShopDept ? 'Body Shop Additional Work' : 'Additional Work');
+  const resolvedSubtitle = subtitle || (isBodyShopDept ? 'Review vehicle details, current job card work, then approve one batch for body shop additional work.' : 'Review the vehicle, current job card, then send one approval batch for the extra work.');
+  const resolvedSuccessMessage = successMessage || (isBodyShopDept ? 'Body shop additional work approved successfully.' : 'Additional work approved successfully.');
+  const resolvedVehicleTitle = vehicleSectionTitle || (isBodyShopDept ? 'Body Shop Vehicle and Customer Details' : 'Vehicle and Customer Details');
+  const resolvedCurrentTitle = currentItemsTitle || (isBodyShopDept ? 'Current Body Shop Job Items' : 'Current Job Card Items');
+  const resolvedEmptyMessage = emptyMessage || (isBodyShopDept ? 'Open a body shop job card to create additional body work against that vehicle.' : 'Open a job card from the Job Cards action menu to create additional work against that vehicle.');
+
   const jobCardRaw = context?.jobCard || null;
   const jobCard = jobCardRaw || {
     id: jobCardId || 'Unknown',
@@ -123,18 +355,17 @@ export function AdditionalWorkRequestScreen({
   const [expectedDelivery, setExpectedDelivery] = useState('');
   const [mechanicExplanation, setMechanicExplanation] = useState('');
   const [selectedAdditionalServices, setSelectedAdditionalServices] = useState([]);
+  const [voiceNoteUrl, setVoiceNoteUrl] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const recorderRef = useRef(null);
 
   const currentServices = useMemo(() => serviceRows({ services: context?.currentServices || jobCard.services || [] }), [context?.currentServices, jobCard.services]);
   const eligibleParentServices = useMemo(() => serviceRows({ services: context?.eligibleParentServices || [] }), [context?.eligibleParentServices]);
   const availableServices = useMemo(() => {
     const services = Array.isArray(context?.availableServices) ? context.availableServices : [];
     const currentServiceNames = new Set(currentServices.map((s) => s.name?.toLowerCase().trim()));
-    let filtered = services.filter((service) => !currentServiceNames.has(service.name?.toLowerCase().trim()));
-    
-    if (!defaultCategory || defaultCategory === 'ALL') return filtered;
-    return filtered.filter((service) => service.category?.toLowerCase() === defaultCategory.toLowerCase());
-  }, [context?.availableServices, defaultCategory, currentServices]);
+    return services.filter((service) => !currentServiceNames.has(service.name?.toLowerCase().trim()));
+  }, [context?.availableServices, currentServices]);
   const pendingApproval = context?.pendingApproval || null;
   const jobCardTaxRate = Number(jobCard.taxRate ?? jobCard.billing?.taxRate ?? TAX_RATE);
   const jobCardDiscountAmount = Number(jobCard.discountAmount ?? jobCard.billing?.discountAmount ?? 0);
@@ -182,17 +413,29 @@ export function AdditionalWorkRequestScreen({
 
     try {
       setIsSending(true);
+
+      let finalVoiceNoteUrl = voiceNoteUrl;
+      if (recorderRef.current && recorderRef.current.isRecording()) {
+        const recordedAudio = await recorderRef.current.stopAndGetAudio();
+        if (recordedAudio) {
+          finalVoiceNoteUrl = recordedAudio;
+        }
+      }
+
       const response = await createAdditionalWorkRequestApi(jobCardId, {
         category: defaultCategory,
         parentJobCardServiceId: Number(parentJobCardServiceId),
         expectedDeliveryAt: expectedDelivery || undefined,
         mechanicExplanation: mechanicExplanation.trim(),
+        voiceNoteUrl: finalVoiceNoteUrl && finalVoiceNoteUrl.trim() ? finalVoiceNoteUrl.trim() : undefined,
         serviceItems: selectedAdditionalServices.map((service) => ({
           serviceItemId: service.serviceItemId || service.id,
           quantity: 1,
         })),
       });
-      toastSuccess(response?.message || successMessage || 'Additional work approved successfully.');
+      await queryClient.invalidateQueries({ queryKey: ['additional-work-requests'] });
+      await queryClient.invalidateQueries({ queryKey: ['job-cards'] });
+      toastSuccess(response?.message || resolvedSuccessMessage || 'Additional work approved successfully.');
       navigate(listRoute);
     } catch (error) {
       toastError(error?.message || 'Unable to send additional work approval.');
@@ -205,11 +448,11 @@ export function AdditionalWorkRequestScreen({
     return (
       <Box sx={{ p: { xs: 2, md: 4 } }}>
         <PageHeader
-          title={`Request ${domainLabel}`}
-          breadcrumbs={[{ label: domainLabel, path: listRoute }, { label: 'New Request' }]}
+          title={`Request ${resolvedDomainLabel}`}
+          breadcrumbs={[{ label: resolvedDomainLabel, path: listRoute }, { label: 'New Request' }]}
         />
         <Alert severity="info" sx={{ mt: 2, borderRadius: 0 }}>
-          {emptyMessage}
+          {resolvedEmptyMessage}
         </Alert>
       </Box>
     );
@@ -222,9 +465,9 @@ export function AdditionalWorkRequestScreen({
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ p: { xs: 2, md: 4 }, bgcolor: '#F4F6F9', minHeight: '100%' }}>
       <PageHeader
-        title={`${domainLabel} / ${jobCard.jobCardNo || jobCard.slug || jobCard.id}`}
-        subtitle={subtitle}
-        breadcrumbs={[{ label: domainLabel, path: listRoute }, { label: jobCard.jobCardNo || jobCard.slug || jobCard.id }]}
+        title={`${resolvedDomainLabel} / ${jobCard.jobCardNo || jobCard.slug || jobCard.id}`}
+        subtitle={resolvedSubtitle}
+        breadcrumbs={[{ label: resolvedDomainLabel, path: listRoute }, { label: jobCard.jobCardNo || jobCard.slug || jobCard.id }]}
         actions={
           <Button variant="back" leftIcon={ArrowLeft} onClick={() => navigate(backRoute)}>
             Back to Job Cards
@@ -235,7 +478,7 @@ export function AdditionalWorkRequestScreen({
       <Grid container spacing={3}>
         <Grid item xs={12} lg={8}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <SectionCard icon={Car} title={vehicleSectionTitle}>
+            <SectionCard icon={Car} title={resolvedVehicleTitle}>
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                   <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -254,25 +497,16 @@ export function AdditionalWorkRequestScreen({
                 <Grid item xs={6} md={3}>
                   <InfoItem label="Job Card" value={jobCard.jobCardNo} />
                 </Grid>
-                {/* <Grid item xs={6} md={3}>
-                  <InfoItem label="Expected Delivery Date" value={snakeToLabel(jobCard.expectedDeliveryAt)} />
-                </Grid> */}
-                {/* <Grid item xs={6} md={3}>
-                  <InfoItem label={assigneeLabel} value={jobCard.technician || 'Unassigned'} />
-                </Grid> */}
                 <Grid item xs={6} md={3}>
                   <InfoItem label="Created" value={formatDate(jobCard.createdAt)} />
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <InfoItem label="Brand / Model" value={jobCard.makeModel || jobCard.vehicleInfo || 'Not captured'} />
                 </Grid>
-                {/* <Grid item xs={12} md={6}>
-                  <InfoItem label="Service Category" value={snakeToLabel(jobCard.serviceType)} />
-                </Grid> */}
               </Grid>
             </SectionCard>
 
-            <SectionCard icon={ClipboardList} title={currentItemsTitle}>
+            <SectionCard icon={ClipboardList} title={resolvedCurrentTitle}>
               <Box sx={{ overflowX: 'auto' }}>
                 <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
                   <Box component="thead">
@@ -307,10 +541,26 @@ export function AdditionalWorkRequestScreen({
                 <Grid item xs={12} md={6}>
                   <FieldLabel required>Expected Delivery</FieldLabel>
                   <TextField fullWidth type="datetime-local" value={expectedDelivery} onChange={(event) => setExpectedDelivery(event.target.value)} required sx={{ '& .MuiInputBase-root': { height: 56, bgcolor: '#FFFFFF' } }} />
+                  <Box sx={{ mt: 1.5 }}>
+                    <LiveVoiceRecorder
+                      recorderRef={recorderRef}
+                      onRecorded={(recordedDataUrl) => setVoiceNoteUrl(recordedDataUrl)}
+                      onClear={() => setVoiceNoteUrl('')}
+                    />
+                  </Box>
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <FieldLabel required>Mechanic Explanation</FieldLabel>
-                  <TextField fullWidth required placeholder="Explain why this extra work is needed" value={mechanicExplanation} onChange={(event) => setMechanicExplanation(event.target.value)} sx={{ '& .MuiInputBase-root': { height: 56, bgcolor: '#FFFFFF' } }} />
+                  <TextField
+                    fullWidth
+                    required
+                    multiline
+                    rows={3}
+                    placeholder="Explain why this extra work is needed"
+                    value={mechanicExplanation}
+                    onChange={(event) => setMechanicExplanation(event.target.value)}
+                    sx={{ '& .MuiInputBase-root': { bgcolor: '#FFFFFF' } }}
+                  />
                 </Grid>
               </Grid>
 
@@ -368,7 +618,6 @@ export function AdditionalWorkRequestScreen({
             <SectionCard icon={MessageCircle} title="Approval Preview">
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                 <Typography sx={{ fontWeight: 800 }}>Bill Preview</Typography>
-                {/* <Chip label="Pending send" size="small" sx={{ bgcolor: '#FEF3C7', color: '#B45309', fontWeight: 800 }} /> */}
               </Box>
 
               <Box
@@ -395,7 +644,7 @@ export function AdditionalWorkRequestScreen({
                 <Divider sx={{ borderStyle: 'dashed', my: 1 }} />
 
                 <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 900, textTransform: 'uppercase' }}>
-                  {additionalBillLabel}
+                  {resolvedBillLabel}
                 </Typography>
                 {selectedAdditionalServices.length ? (
                   selectedAdditionalServices.map((service) => (
@@ -418,7 +667,7 @@ export function AdditionalWorkRequestScreen({
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>{formatCurrency(baseSubtotal)}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">{additionalBillLabel}</Typography>
+                  <Typography variant="body2" color="text.secondary">{resolvedBillLabel}</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>{formatCurrency(additionalSubtotal)}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -447,7 +696,7 @@ export function AdditionalWorkRequestScreen({
                 </Alert>
               )}
               <Button fullWidth type="submit" variant="primary" leftIcon={Send} isLoading={isSending} disabled={!eligibleParentServices.length} sx={{ mt: 2.5 }}>
-                {sendButtonLabel}
+                {resolvedSendButtonLabel}
               </Button>
             </SectionCard>
           </Box>
@@ -458,5 +707,14 @@ export function AdditionalWorkRequestScreen({
 }
 
 export default function CreateRequest() {
-  return <AdditionalWorkRequestScreen />;
+  const [searchParams] = useSearchParams();
+  const categoryParam = String(searchParams.get('category') || searchParams.get('department') || '').toLowerCase();
+
+  return (
+    <AdditionalWorkRequestScreen
+      defaultCategory={categoryParam || 'mechanical'}
+      listRoute={ROUTES.FLOOR_ADDITIONAL_WORK}
+      backRoute={ROUTES.JOB_CARDS}
+    />
+  );
 }

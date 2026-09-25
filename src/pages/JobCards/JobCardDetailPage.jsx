@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Box, Grid, Card, Typography, Divider, Chip, IconButton, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
-import { ArrowLeft, ArrowRight, Car, User, Shield, FileText, AlertTriangle, PlusCircle, Clock, ChevronDown, ChevronUp, ClipboardList, Wrench, Play, Filter, PauseCircle, PlayCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Car, User, Shield, FileText, AlertTriangle, PlusCircle, Clock, ChevronDown, ChevronUp, ClipboardList, Wrench, Play, Filter, PauseCircle, PlayCircle, Mic } from 'lucide-react';
 import { useJobCard } from '../../queries/useDataQueries';
 import StatusBadge from '../../components/common/StatusBadge';
 import Loader from '../../components/common/Loader';
@@ -368,6 +368,50 @@ export default function JobCardDetailPage() {
                       <Typography variant="body2" color="text.primary">
                         {item.value}
                       </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Card>)}
+           {/* {Additional Work Messages & Voice Notes} */}
+            {Array.isArray(jobCard?.approvals) && jobCard.approvals.some((a) => a.mechanicExplanation || a.voiceNoteUrl) && (
+              <Card sx={{ borderRadius: 0 }}>
+                <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Mic size={18} color="#0d9488" />
+                  <Typography variant="subtitle1" fontWeight={700}>Additional Work Messages & Voice Notes</Typography>
+                </Box>
+                <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                  {jobCard.approvals.filter((a) => a.mechanicExplanation || a.voiceNoteUrl).map((approval, idx) => (
+                    <Box key={approval.id || idx} sx={{ p: 2.5, border: '1px solid #e2e8f0', borderRadius: 2, bgcolor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {approval.approvalCode ? `Approval Request: ${approval.approvalCode}` : `Additional Work Request #${idx + 1}`}
+                        </Typography>
+                        {approval.createdAt && (
+                          <Typography variant="caption" color="text.secondary">
+                            {formatDateTime(approval.createdAt)}
+                          </Typography>
+                        )}
+                      </Box>
+
+                      {approval.mechanicExplanation && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
+                            Explanation / Message
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#1e293b', bgcolor: '#ffffff', p: 1.5, borderRadius: 1, border: '1px solid #e2e8f0', whiteSpace: 'pre-wrap' }}>
+                            {approval.mechanicExplanation}
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {approval.voiceNoteUrl && (
+                        <Box sx={{ p: 2, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#047857', display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Mic size={16} /> Recorded Voice Note Audio:
+                          </Typography>
+                          <audio controls src={approval.voiceNoteUrl} style={{ width: '100%', height: 40 }} />
+                        </Box>
+                      )}
                     </Box>
                   ))}
                 </Box>

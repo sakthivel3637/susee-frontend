@@ -24,7 +24,7 @@ const getValidationSchema = (canAssignLocation) => z.object({
 const BAY_TYPES = [
   { value: 'Mechanical', label: 'Mechanical' },
   { value: 'Body Shop', label: 'Body Shop' },
-  { value: 'Water Wash', label: 'Water Wash' }
+
 ];
 
 export default function BayForm() {

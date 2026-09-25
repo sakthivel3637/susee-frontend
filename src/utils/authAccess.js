@@ -75,10 +75,13 @@ export const hasMenuAction = (modules = [], path, action) => {
 
 export const hasAnyReadableMenu = (modules = []) => getReadableMenus(modules).length > 0;
 
+export const isFloorSupervisor = (modules = []) => {
+  return hasReadableModule(modules, 'floor-supervisor');
+};
+
 export const getDepartmentFromModules = (modules = []) => {
   if (hasReadableModule(modules, 'body-shop-supervisor')) return 'body-shop';
-  if (hasReadableModule(modules, 'water-wash-team')) return 'water-wash';
-  if (hasReadableModule(modules, 'floor-supervisor')) return 'mechanical';
+  if (hasReadableModule(modules, 'floor-supervisor')) return null;
   return null;
 };
 
