@@ -110,6 +110,7 @@ export default function AssignMechanicList() {
   const [assignModal, setAssignModal] = useState({ isOpen: false, item: null });
   const [selectedMechanic, setSelectedMechanic] = useState('');
   const [selectedBay, setSelectedBay] = useState('');
+
   const selectedMechanicUser = mechanics.find((mechanic) => String(mechanic.id) === String(selectedMechanic));
   const selectedBayItem = bays.find((bay) => String(bay.id) === String(selectedBay));
 
@@ -134,8 +135,6 @@ export default function AssignMechanicList() {
       toastError(error?.message || `Failed to assign ${assigneeLabel.toLowerCase()}`);
     }
   });
-
-
 
   const filteredJobs = localJobs.filter(job =>
     (job?.vehicleNo || job?.vehicleNumber || '')?.toLowerCase().includes(search.toLowerCase()) ||
@@ -333,9 +332,9 @@ export default function AssignMechanicList() {
                   color: '#FFFFFF',
                   '&:hover': { bgcolor: '#1E3A8A' }
                 } : {
-                  borderColor: '#CBD5E1',
-                  color: '#475569',
-                  bgcolor: '#FFFFFF',
+                  borderColor: '#ffffff',
+                  color: '#1E3A8A',
+                  bgcolor: '#ffffff',
                   '&:hover': { bgcolor: '#F8FAFC', borderColor: '#94A3B8' }
                 })
               }}
@@ -413,11 +412,11 @@ export default function AssignMechanicList() {
               Please assign a {assigneeLabel.toLowerCase()} for job <strong>{assignModal.item.jobCardNo || assignModal.item.id}</strong>.
             </Typography>
 
-            <FormControl fullWidth size="small">
-              <InputLabel>{`Select ${assigneeLabel}`}</InputLabel>
+            <FormControl fullWidth size="small" variant="outlined">
+              <InputLabel>{assigneeLabel}</InputLabel>
               <Select
                 value={selectedMechanic}
-                label={`Select ${assigneeLabel}`}
+                label={assigneeLabel}
                 onChange={(e) => setSelectedMechanic(e.target.value)}
                 sx={{ borderRadius: 2 }}
               >
@@ -431,36 +430,40 @@ export default function AssignMechanicList() {
                     No active {assigneeLabel.toLowerCase()}s found
                   </MenuItem>
                 )}
-                {mechanics.map((mechanic) => (
-                  <MenuItem key={mechanic.id} value={mechanic.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 2 }}>
-                      <Typography sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                        {mechanic.fullName}{mechanic.employeeCode ? ` (${mechanic.employeeCode})` : ''}
-                      </Typography>
-                      <Chip
-                        size="small"
-                        label={mechanic.availabilityLabel || (mechanic.activeJobCount > 0 ? `Busy (${mechanic.activeJobCount} jobs)` : 'Available')}
-                        sx={{
-                          height: 22,
-                          fontSize: '0.68rem',
-                          fontWeight: 800,
-                          bgcolor: mechanic.activeJobCount > 0 ? '#FEF3C7' : '#DCFCE7',
-                          color: mechanic.activeJobCount > 0 ? '#B45309' : '#15803D',
-                          border: '1px solid',
-                          borderColor: mechanic.activeJobCount > 0 ? '#FCD34D' : '#86EFAC',
-                        }}
-                      />
-                    </Box>
-                  </MenuItem>
-                ))}
+                {mechanics.map((mechanic) => {
+                  const isBusy = mechanic.activeJobCount > 0;
+                  const statusText = mechanic.availabilityLabel || (isBusy ? `Busy (${mechanic.activeJobCount} job${mechanic.activeJobCount > 1 ? 's' : ''})` : 'Available');
+                  return (
+                    <MenuItem key={mechanic.id} value={mechanic.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 2 }}>
+                        <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                          {mechanic.fullName}{mechanic.employeeCode ? ` - ${mechanic.employeeCode}` : ''}
+                        </Typography>
+                        <Chip
+                          size="small"
+                          label={statusText}
+                          sx={{
+                            height: 20,
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            bgcolor: isBusy ? '#FEF3C7' : '#DCFCE7',
+                            color: isBusy ? '#B45309' : '#15803D',
+                            border: '1px solid',
+                            borderColor: isBusy ? '#FCD34D' : '#86EFAC',
+                          }}
+                        />
+                      </Box>
+                    </MenuItem>
+                  );
+                })}
               </Select>
             </FormControl>
 
-            <FormControl fullWidth size="small">
-              <InputLabel>Bay Number</InputLabel>
+            <FormControl fullWidth size="small" variant="outlined">
+              <InputLabel>Bay</InputLabel>
               <Select
                 value={selectedBay}
-                label="Bay Number"
+                label="Bay"
                 onChange={(e) => setSelectedBay(e.target.value)}
                 sx={{ borderRadius: 2 }}
               >
@@ -476,19 +479,20 @@ export default function AssignMechanicList() {
                 )}
                 {bays.map((bay) => {
                   const isBusy = bay.availability === 'BUSY';
+                  const statusText = bay.availabilityLabel || (isBusy ? 'Busy' : 'Available');
                   return (
                     <MenuItem key={bay.id} value={bay.id} disabled={isBusy}>
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 2 }}>
-                        <Typography sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                        <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
                           {bay.bayName || bay.bayCode}
                         </Typography>
                         <Chip
                           size="small"
-                          label={bay.availabilityLabel || (isBusy ? 'Busy' : 'Available')}
+                          label={statusText}
                           sx={{
-                            height: 22,
+                            height: 20,
                             fontSize: '0.68rem',
-                            fontWeight: 800,
+                            fontWeight: 700,
                             bgcolor: isBusy ? '#FEF3C7' : '#DCFCE7',
                             color: isBusy ? '#B45309' : '#15803D',
                             border: '1px solid',
@@ -501,11 +505,10 @@ export default function AssignMechanicList() {
                 })}
               </Select>
             </FormControl>
-            {/* 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#6b7280', fontSize: '0.875rem', mt: 1 }}>
-              <Printer size={14} />
-              <span>Assigning will automatically print a hard copy of the job card.</span>
-            </Box> */}
+
+            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 500, mt: -0.5 }}>
+              Category: {isBodyShop ? 'Body Shop' : 'Mechanical'}
+            </Typography>
           </Box>
         )}
       </Modal>

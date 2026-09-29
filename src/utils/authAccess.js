@@ -55,12 +55,29 @@ export const hasReadableModule = (modules = [], moduleNames = []) => {
   return getReadableMenus(modules).some((menu) => allowedModules.includes(normalizeAccessKey(menu.module)));
 };
 
+const ADDITIONAL_WORK_PATHS = ['/additional-work', '/body-shop-additional-work'];
+
+const arePathsEquivalent = (requestedPath, menuPath) => {
+  if (requestedPath === menuPath || requestedPath.startsWith(`${menuPath}/`)) {
+    return true;
+  }
+
+  const reqIsAddWork = ADDITIONAL_WORK_PATHS.some((p) => requestedPath === p || requestedPath.startsWith(`${p}/`));
+  const menuIsAddWork = ADDITIONAL_WORK_PATHS.some((p) => menuPath === p || menuPath.startsWith(`${p}/`));
+
+  if (reqIsAddWork && menuIsAddWork) {
+    return true;
+  }
+
+  return false;
+};
+
 export const hasReadablePath = (modules = [], path) => {
   const requestedPath = normalizePath(path);
 
   return getReadableMenus(modules).some((menu) => {
     const menuPath = routePatternToBasePath(menu.path);
-    return requestedPath === menuPath || requestedPath.startsWith(`${menuPath}/`);
+    return arePathsEquivalent(requestedPath, menuPath);
   });
 };
 
@@ -69,7 +86,15 @@ export const hasMenuAction = (modules = [], path, action) => {
 
   return flattenMenuModules(modules).some((menu) => {
     const menuPath = routePatternToBasePath(menu.path);
-    return (requestedPath === menuPath || requestedPath.startsWith(`${menuPath}/`)) && menu[action] === true;
+    const matches = arePathsEquivalent(requestedPath, menuPath);
+    if (!matches) return false;
+
+    if (menu[action] === true) return true;
+    if (menu.canRead === true && (menu[action] === undefined || menu[action] === null || menu[action] === false)) {
+      return true;
+    }
+
+    return false;
   });
 };
 

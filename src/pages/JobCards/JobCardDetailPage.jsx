@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Box, Grid, Card, Typography, Divider, Chip, IconButton, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
-import { ArrowLeft, ArrowRight, Car, User, Shield, FileText, AlertTriangle, PlusCircle, Clock, ChevronDown, ChevronUp, ClipboardList, Wrench, Play, Filter, PauseCircle, PlayCircle, Mic } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Car, User, Shield, FileText, AlertTriangle, PlusCircle, Clock, ChevronDown, ChevronUp, ClipboardList, Wrench, Play, Filter, PauseCircle, PlayCircle, Mic, Plus, Minus, MapPin, Maximize2, X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { useJobCard } from '../../queries/useDataQueries';
 import StatusBadge from '../../components/common/StatusBadge';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
+import BackButton from '../../components/common/BackButton';
 import PageHeader from '../../components/shared/PageHeader';
 import Modal from '../../components/common/Modal';
 import { formatDateTime, formatCurrency } from '../../utils/formatters';
@@ -24,6 +25,9 @@ export default function JobCardDetailPage() {
   const location = useLocation();
   const { data: jobCard, isLoading } = useJobCard(jobCardIdentifier);
   const [expandedAssignmentId, setExpandedAssignmentId] = useState(null);
+  const [expandedApprovalIds, setExpandedApprovalIds] = useState({});
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const [isPhotoLightboxOpen, setIsPhotoLightboxOpen] = useState(false);
 
   const { user, role } = useAuthStore();
   const locationId = user?.locationId || user?.location_id || user?.branchId || '';
@@ -85,7 +89,7 @@ export default function JobCardDetailPage() {
     if (location.state?.fromVehicleHistory) {
       navigate(-1);
     } else {
-      navigate(ROUTES.JOB_CARDS);
+      navigate(ROUTES.JOB_CARDS, { state: { activeTab: location.state?.activeTab } });
     }
   };
 
@@ -176,6 +180,48 @@ export default function JobCardDetailPage() {
       })) || [])
   };
 
+  const rawPhotos = [
+    ...(Array.isArray(jobCard?.photos) ? jobCard.photos : []),
+    ...(Array.isArray(jobCard?.media) ? jobCard.media : []),
+    ...(Array.isArray(jobCard?.mediaFiles) ? jobCard.mediaFiles : []),
+    ...(Array.isArray(jobCard?.vehicle?.mediaFiles) ? jobCard.vehicle.mediaFiles : []),
+    ...(Array.isArray(jobCard?.gateEntry?.mediaFiles) ? jobCard.gateEntry.mediaFiles : [])
+  ];
+
+  const uniquePhotosMap = new Map();
+  rawPhotos.forEach((p, idx) => {
+    let photoUrl = p?.fileUrl || p?.mediaUrl || p?.url || p?.blobUrl || '';
+    if (photoUrl && typeof photoUrl === 'string') {
+      if (!photoUrl.startsWith('http://') && !photoUrl.startsWith('https://') && !photoUrl.startsWith('data:') && !photoUrl.startsWith('blob:')) {
+        const apiBase = import.meta.env.VITE_API_URL || '';
+        const serverOrigin = apiBase ? apiBase.replace(/\/api\/?$/, '') : window.location.origin;
+        photoUrl = `${serverOrigin}${photoUrl.startsWith('/') ? '' : '/'}${photoUrl}`;
+      }
+      const key = p.id || photoUrl;
+      if (!uniquePhotosMap.has(key)) {
+        uniquePhotosMap.set(key, {
+          id: p.id || `photo-${idx}`,
+          url: photoUrl,
+          category: p.category || p.name || `Photo #${idx + 1}`,
+          fileName: p.fileName || p.originalname || p.originalName || p.name || ''
+        });
+      }
+    }
+  });
+
+  const vehiclePhotos = Array.from(uniquePhotosMap.values()).filter((img) => {
+    const cat = String(img.category || '').toUpperCase();
+    const fname = String(img.fileName || '').toLowerCase();
+    const url = String(img.url || '').toLowerCase();
+    return (
+      cat !== 'SIGNATURE' &&
+      !fname.includes('signature') &&
+      !fname.includes('sign_') &&
+      !fname.includes('sign-') &&
+      !url.includes('signature')
+    );
+  });
+
   const allServices = displayJobCard.services || [];
   const defaultServices = allServices.filter(s => !s.isAdditional);
   const additionalServices = allServices.filter(s => s.isAdditional);
@@ -186,32 +232,299 @@ export default function JobCardDetailPage() {
   ].filter(Boolean);
 
   const taxRate = jobCard.billing?.taxRate ?? jobCard.taxRate ?? 18;
-  const totalSubtotal = jobCard.billing?.serviceSubtotal ?? jobCard.serviceSubtotal ?? (displayJobCard.estimatedCost / (1 + taxRate / 100));
+  const rawTotalSubtotal = jobCard.billing?.serviceSubtotal ?? jobCard.serviceSubtotal ?? (displayJobCard.estimatedCost / (1 + taxRate / 100));
+
+  const validInitialServices = defaultServices.filter(s => s.status !== 'REJECTED' && s.status !== 'CANCELLED');
+  const initialServicesSum = validInitialServices.reduce((sum, s) => sum + (Number(s.price || 0) * Number(s.quantity || 1)), 0);
+  const hasItemPrices = validInitialServices.some(s => Number(s.price) > 0);
+
   const approvedAdditionalTotal = additionalServices
-    .filter(s => s.status !== 'REJECTED')
-    .reduce((sum, s) => sum + s.price, 0);
+    .filter(s => s.status !== 'REJECTED' && s.status !== 'CANCELLED')
+    .reduce((sum, s) => sum + (Number(s.price || 0) * Number(s.quantity || 1)), 0);
+
+  const fallbackBaseSubtotal = Math.max(0, rawTotalSubtotal - approvedAdditionalTotal);
+  const baseSubtotal = hasItemPrices ? initialServicesSum : (fallbackBaseSubtotal > 0 ? fallbackBaseSubtotal : rawTotalSubtotal);
 
   const discountAmount = jobCard.billing?.discountAmount ?? jobCard.discountAmount ?? 0;
-  const taxableAmount = Math.max(0, totalSubtotal - discountAmount);
+  const combinedSubtotal = baseSubtotal + approvedAdditionalTotal;
+  const taxableAmount = Math.max(0, combinedSubtotal - discountAmount);
   const totalTaxAmount = (taxableAmount * (taxRate / 100));
   const totalGrandTotal = taxableAmount + totalTaxAmount;
 
+  const getInitials = (name) => {
+    if (!name || name === 'Unknown' || name === '—') return 'CU';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const firstAssignment = assignmentDetails[0] || {};
+  const activeAssignment = assignmentDetails.find(a => !a.completedAt) || firstAssignment;
+  const assignedMechanicName = activeAssignment.assignedUser?.fullName || firstAssignment.assignedUser?.fullName || jobCard.technician || jobCard.assignedMechanic?.fullName || 'Unassigned';
+  const assignedBayName = activeAssignment.bay?.bayName || activeAssignment.bay?.bayCode || activeAssignment.bay?.name || firstAssignment.bay?.bayName || firstAssignment.bay?.bayCode || firstAssignment.bay?.name || jobCard.bay?.bayName || jobCard.bay?.name || jobCard.assignedBay?.bayName || jobCard.assignedBay?.name || '—';
+
+  const computeServiceWorkStatus = () => {
+    const services = displayJobCard.services || [];
+    const assignments = jobCard?.workAssignments || [];
+
+    const hasMechanical = services.some(s => {
+      const cat = String(s.category || s.serviceItem?.category?.name || s.name || '').toLowerCase();
+      return cat.includes('mechanic') || cat.includes('floor');
+    }) || assignments.some(a => String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase().includes('mechanic'));
+
+    const hasBodyshop = services.some(s => {
+      const cat = String(s.category || s.serviceItem?.category?.name || s.name || '').toLowerCase();
+      return cat.includes('body') || cat.includes('denting') || cat.includes('paint');
+    }) || assignments.some(a => String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase().includes('body'));
+
+    const isAllCompleted = services.length > 0 && services.every(s => {
+      const st = String(s.status || s.serviceStatus?.statusCode || s.serviceStatus?.code || '').toUpperCase();
+      return st.includes('COMPLETED') || st.includes('REJECTED') || st.includes('CANCELLED');
+    });
+
+    if (isAllCompleted) {
+      if (hasMechanical && hasBodyshop) return 'Completed (Mechanical & Body Shop)';
+      if (hasBodyshop) return 'Completed (Body Shop)';
+      if (hasMechanical) return 'Completed (Mechanical)';
+      return 'Completed';
+    }
+
+    if (hasMechanical && hasBodyshop) return 'Mechanical & Body Shop';
+    if (hasBodyshop) return 'Body Shop Work';
+    if (hasMechanical) return 'Mechanical Work';
+    return displayJobCard.serviceType || 'Regular Service';
+  };
+
+  const services = displayJobCard?.services || [];
+  const assignments = jobCard?.workAssignments || [];
+
+  const hasMechanicalWork = services.some(s => {
+    const name = String(s.name || '').toLowerCase();
+    return !name.includes('body') && !name.includes('denting') && !name.includes('paint');
+  }) || assignments.some(a => {
+    const cat = String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
+    return cat.includes('mechanic') || cat.includes('floor') || (!cat.includes('body') && !cat.includes('paint'));
+  });
+
+  const hasBodyshopWork = services.some(s => {
+    const name = String(s.name || '').toLowerCase();
+    return name.includes('body') || name.includes('denting') || name.includes('paint');
+  }) || assignments.some(a => {
+    const cat = String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
+    return cat.includes('body') || cat.includes('denting') || cat.includes('paint');
+  });
+
+  const mechanicalAssignments = assignments.filter(a => {
+    const cat = String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
+    return !cat.includes('body') && !cat.includes('paint');
+  });
+  const isMechanicalDone = hasMechanicalWork && (
+    mechanicalAssignments.length > 0
+      ? mechanicalAssignments.every(a => !!a.completedAt || getAssignmentStatusValue(a) === 'COMPLETED')
+      : services.filter(s => !String(s.name || '').toLowerCase().includes('body')).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
+  );
+
+  const bodyshopAssignments = assignments.filter(a => {
+    const cat = String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
+    return cat.includes('body') || cat.includes('denting') || cat.includes('paint');
+  });
+  const isBodyshopDone = hasBodyshopWork && (
+    bodyshopAssignments.length > 0
+      ? bodyshopAssignments.every(a => !!a.completedAt || getAssignmentStatusValue(a) === 'COMPLETED')
+      : services.filter(s => String(s.name || '').toLowerCase().includes('body')).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
+  );
+
+  const pendingApprovalsCount = (jobCard?.approvals || []).filter(a => {
+    const st = String(a.statusCode || a.customerResponse || a.status || '').toUpperCase();
+    return st.includes('PENDING');
+  }).length;
+
+  const jcStatusCode = String(jobCard?.currentStatus?.statusCode || jobCard?.status || '').toUpperCase();
+  const isJobDelivered = jcStatusCode.includes('DELIVERED');
+
+  const entryTimeStr = jobCard?.gateEntry?.entryTime || jobCard?.createdAt;
+  const entryFormatted = entryTimeStr ? formatDateTime(entryTimeStr) : '—';
+  const entryActor = jobCard?.gateEntry?.createdByUser?.fullName || jobCard?.gateEntry?.enteredBy?.fullName || 'Gate Security';
+
+  const createdFormatted = jobCard?.createdAt ? formatDateTime(jobCard.createdAt) : '—';
+  const creatorActor = jobCard?.advisor?.fullName || jobCard?.createdByUser?.fullName || 'CRM Team';
+  const estCostFormatted = formatCurrency(totalGrandTotal || displayJobCard?.estimatedCost || 0);
+
+  const mechanicalState = !hasMechanicalWork
+    ? 'completed'
+    : (isMechanicalDone ? 'completed' : 'active');
+
+  const bodyshopState = !hasBodyshopWork
+    ? 'completed'
+    : (isBodyshopDone ? 'completed' : (hasMechanicalWork && !isMechanicalDone ? 'pending' : 'active'));
+
+  const deliveryState = isJobDelivered
+    ? 'completed'
+    : ((!hasMechanicalWork || isMechanicalDone) && (!hasBodyshopWork || isBodyshopDone) && pendingApprovalsCount === 0 ? 'active' : 'pending');
+
+  const timelineSteps = [
+    {
+      id: 'entry',
+      title: 'Vehicle Entry',
+      subtitle: `${entryFormatted} · ${entryActor}`,
+      state: 'completed'
+    },
+    {
+      id: 'created',
+      title: 'Job Card Created',
+      subtitle: `${createdFormatted} · ${creatorActor} · ${estCostFormatted} est.`,
+      state: 'completed'
+    },
+    {
+      id: 'mechanical',
+      title: 'Mechanical Work',
+      subtitle: !hasMechanicalWork
+        ? 'N/A (No Mechanical Services)'
+        : (isMechanicalDone
+          ? 'Mechanical Work Completed'
+          : (mechanicalAssignments.length > 0
+            ? `Assigned to ${assignedMechanicName}${assignedBayName !== '—' ? ` · ${assignedBayName}` : ''}`
+            : 'In Progress / Pending Assignment')),
+      state: mechanicalState
+    },
+    {
+      id: 'approval',
+      title: 'Customer Approvals',
+      subtitle: pendingApprovalsCount > 0
+        ? `Pending — ${pendingApprovalsCount} item${pendingApprovalsCount > 1 ? 's' : ''} awaiting`
+        : (additionalServices.length > 0 ? 'All additional work approved' : 'No pending approval'),
+      state: pendingApprovalsCount > 0 ? 'active' : 'completed'
+    },
+    {
+      id: 'bodyshop',
+      title: 'Body Shop',
+      subtitle: !hasBodyshopWork
+        ? 'N/A (No Body Shop Services)'
+        : (isBodyshopDone
+          ? 'Body Shop Work Completed'
+          : (bodyshopAssignments.length > 0
+            ? 'In Progress — Body Shop Bay'
+            : 'Pending Body Shop Work')),
+      state: bodyshopState
+    },
+    {
+      id: 'delivery',
+      title: 'Vehicle Delivery',
+      subtitle: isJobDelivered
+        ? 'Vehicle Delivered'
+        : (deliveryState === 'active'
+          ? `Ready for Delivery — Expected: ${displayJobCard?.expectedDeliveryAt ? formatDateTime(displayJobCard.expectedDeliveryAt) : (jobCard?.expectedDeliveryDate ? formatDateTime(jobCard.expectedDeliveryDate) : 'Today 5:00 PM')}`
+          : `Expected: ${displayJobCard?.expectedDeliveryAt ? formatDateTime(displayJobCard.expectedDeliveryAt) : (jobCard?.expectedDeliveryDate ? formatDateTime(jobCard.expectedDeliveryDate) : 'Today 5:00 PM')}`),
+      state: deliveryState
+    }
+  ];
+
+  const formatTimeOnly = (dateVal) => {
+    if (!dateVal) return '—';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch (e) {
+      return '—';
+    }
+  };
+
+  const calculateDurationText = (startedAt, completedAt) => {
+    if (!startedAt) return '—';
+    const startMs = new Date(startedAt).getTime();
+    if (isNaN(startMs)) return '—';
+    const endMs = completedAt ? new Date(completedAt).getTime() : Date.now();
+    if (isNaN(endMs)) return '—';
+
+    const diffMs = Math.max(0, endMs - startMs);
+    const totalMins = Math.floor(diffMs / (1000 * 60));
+    const hrs = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+
+    if (hrs > 0) {
+      return `${hrs}h ${String(mins).padStart(2, '0')}m`;
+    }
+    return `${mins}m`;
+  };
+
+  const gateTimeFormatted = formatTimeOnly(jobCard?.gateEntry?.entryTime || jobCard?.createdAt);
+
+  const mechStartAt = mechanicalAssignments[0]?.createdAt || jobCard?.startedAt;
+  const mechCompAt = isMechanicalDone ? (mechanicalAssignments[mechanicalAssignments.length - 1]?.completedAt || mechanicalAssignments[0]?.completedAt) : null;
+  const mechStartFormatted = formatTimeOnly(mechStartAt);
+  const timeInMechFormatted = mechStartAt ? calculateDurationText(mechStartAt, mechCompAt) : '—';
+
+  const bodyshopStartAt = bodyshopAssignments[0]?.createdAt;
+  const bodyshopCompAt = isBodyshopDone ? (bodyshopAssignments[bodyshopAssignments.length - 1]?.completedAt || bodyshopAssignments[0]?.completedAt) : null;
+  const bodyshopStartFormatted = formatTimeOnly(bodyshopStartAt);
+  const timeInBodyshopFormatted = bodyshopStartAt ? calculateDurationText(bodyshopStartAt, bodyshopCompAt) : '—';
+
+  const addlAssignments = (jobCard?.workAssignments || []).filter(a => a.jobCardService?.isAdditional || a.service?.isAdditional);
+  const addlStartAt = addlAssignments[0]?.createdAt;
+  const addlCompAt = addlAssignments.length > 0 && addlAssignments.every(a => !!a.completedAt) ? addlAssignments[addlAssignments.length - 1]?.completedAt : null;
+  const timeInAddlFormatted = addlStartAt ? calculateDurationText(addlStartAt, addlCompAt) : '—';
+
+  const deliveryTimeStr = displayJobCard?.expectedDeliveryAt || jobCard?.expectedDeliveryDate;
+  const promisedDeliveryFormatted = formatTimeOnly(deliveryTimeStr);
+
+  const computeTimeRemainingPill = () => {
+    if (isJobDelivered) {
+      return { text: 'Vehicle Delivered', color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' };
+    }
+    if (!deliveryTimeStr) {
+      return { text: 'Promised Delivery: Scheduled', color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' };
+    }
+    const deliveryMs = new Date(deliveryTimeStr).getTime();
+    if (isNaN(deliveryMs)) {
+      return { text: 'Promised Delivery: Scheduled', color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' };
+    }
+    const diffMs = deliveryMs - Date.now();
+    if (diffMs <= 0) {
+      const overdueMins = Math.floor(Math.abs(diffMs) / (1000 * 60));
+      const hrs = Math.floor(overdueMins / 60);
+      const mins = overdueMins % 60;
+      const overdueStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+      return { text: `Overdue by ${overdueStr}`, color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' };
+    } else {
+      const remMins = Math.floor(diffMs / (1000 * 60));
+      const hrs = Math.floor(remMins / 60);
+      const mins = remMins % 60;
+      const remStr = hrs > 0 ? `${hrs}h ${String(mins).padStart(2, '0')}m` : `${mins}m`;
+      return { text: `Time remaining: ${remStr} till delivery`, color: '#047857', bg: '#f0fdf4', border: '#bbf7d0' };
+    }
+  };
+  const remainingPill = computeTimeRemainingPill();
+
+  const supervisorNotesText = String(
+    jobCard?.supervisorNotes ||
+    jobCard?.supervisor_notes ||
+    jobCard?.remarks ||
+    jobCard?.advisorNotes ||
+    jobCard?.additionalNotes ||
+    jobCard?.notes ||
+    ''
+  ).trim();
+
   return (
     <Box sx={{ minHeight: '100%', p: { xs: 2, md: 4 } }}>
-      {/* Page Header */}
-      <PageHeader
-        title={`Job Card: ${displayJobCard.id}`}
-        subtitle={`Created on ${formatDateTime(displayJobCard.createdAt)}`}
-        breadcrumbs={[{ label: 'Job Cards', path: ROUTES.JOB_CARDS }, { label: 'View Details' }]}
-        actions={
-          <Box sx={{ display: 'flex', gap: 1 }}>
-
-            <Button variant="back" leftIcon={ArrowLeft} onClick={handleBack}>
-              Back
-            </Button>
-          </Box>
-        }
-      />
+      {/* Top Header */}
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography variant="h5" fontWeight={800} sx={{ color: '#1e3a8a', letterSpacing: '-0.01em' }}>
+            {displayJobCard.vehicleNumber} — {displayJobCard.ownerName}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.25 }}>
+            Job Card: <strong>{displayJobCard.id}</strong>{' · '}{displayJobCard.vehicleBrandModel} {jobCard.vehicle?.color ? `· ${jobCard.vehicle.color}` : ''} {jobCard.vehicle?.fuelType ? `· ${jobCard.vehicle.fuelType}` : ''}{' · '}Created on {formatDateTime(displayJobCard.createdAt)}
+          </Typography>
+        </Box>
+        <BackButton
+          onClick={handleBack}
+          label="Back to List"
+        />
+      </Box>
 
       <Grid container spacing={3}>
         {/* Left Column: Information details */}
@@ -219,65 +532,183 @@ export default function JobCardDetailPage() {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
             {/* Customer & Vehicle Info */}
-            <Card sx={{ borderRadius: 0 }}>
-              <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Car size={18} color="#0d9488" />
-                <Typography variant="subtitle1" fontWeight={700}>Vehicle & Owner Details</Typography>
+            <Card sx={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', p: 3 }}>
+              <Box sx={{ pb: 1.5, mb: 3, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Car size={18} color="#dc2626" />
+                <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  VEHICLE & CUSTOMER DETAILS
+                </Typography>
               </Box>
-              <Box sx={{ p: 3 }}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Owner Name</Typography>
-                    <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <User size={15} color="#6b7280" />
-                      {displayJobCard.ownerName}
+
+              <Grid container spacing={3}>
+                {/* CUSTOMER COLUMN */}
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ pr: { md: 2 } }}>
+                    <Typography variant="caption" fontWeight={800} sx={{ color: '#94a3b8', letterSpacing: '0.08em', display: 'block', mb: 2, textTransform: 'uppercase' }}>
+                      CUSTOMER
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Mobile Number</Typography>
-                    <Typography variant="body2" fontWeight={600}>
-                      {displayJobCard.ownerMobile}
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2.5 }}>
+                      <Box sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        bgcolor: '#2563eb',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 800,
+                        fontSize: '1rem',
+                        flexShrink: 0
+                      }}>
+                        {getInitials(displayJobCard.ownerName)}
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#0f172a', lineHeight: 1.2 }}>
+                          {displayJobCard.ownerName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.25 }}>
+                          {displayJobCard.ownerMobile}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Job Card No.:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#334155' }}>{displayJobCard.id}</Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Entry Time:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {displayJobCard.createdAt ? formatDateTime(displayJobCard.createdAt) : '—'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Est. Delivery:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#0d9488' }}>
+                            {displayJobCard.expectedDeliveryAt
+                              ? formatDateTime(displayJobCard.expectedDeliveryAt)
+                              : displayJobCard.expectedDeliveryDate
+                                ? formatDateTime(displayJobCard.expectedDeliveryDate)
+                                : '—'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Service Type:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {computeServiceWorkStatus()}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Box>
+                </Grid>
+
+                {/* VEHICLE COLUMN */}
+                <Grid item xs={12} md={6} sx={{ borderLeft: { md: '1px solid #f1f5f9' }, pl: { md: 3 } }}>
+                  <Box>
+                    <Typography variant="caption" fontWeight={800} sx={{ color: '#94a3b8', letterSpacing: '0.08em', display: 'block', mb: 2, textTransform: 'uppercase' }}>
+                      VEHICLE
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6} sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2, mt: 2 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Registration Number</Typography>
-                    <Typography variant="body2" fontWeight={700} color="primary.main">
+
+                    <Typography variant="h4" fontWeight={800} sx={{ color: '#1e40af', letterSpacing: '0.05em', mb: 2, fontFamily: 'monospace, sans-serif' }}>
                       {displayJobCard.vehicleNumber}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6} sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2, mt: 2 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Brand & Model</Typography>
-                    <Typography variant="body2" fontWeight={600}>
-                      {displayJobCard.vehicleBrandModel}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6} sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2, mt: 2 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Expected Delivery Date</Typography>
-                    <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#0d9488' }}>
-                      <Clock size={15} color="#0d9488" />
-                      {displayJobCard.expectedDeliveryAt ? formatDateTime(displayJobCard.expectedDeliveryAt) : displayJobCard.expectedDeliveryDate ? formatDateTime(displayJobCard.expectedDeliveryDate) : '—'}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6} sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2, mt: 2 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Service Type</Typography>
-                    <Typography variant="body2" fontWeight={600}>
-                      {displayJobCard.serviceType || 'Regular Service'}
-                    </Typography>
-                  </Grid>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Make/Model:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a' }}>{displayJobCard.vehicleBrandModel}</Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Colour:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {jobCard.vehicle?.color || jobCard.vehicleColor || jobCard.color || 'White'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Fuel:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {jobCard.vehicle?.fuelType || jobCard.fuelType || 'Petrol'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Mechanic:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {assignedMechanicName}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Bay:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {assignedBayName}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Box>
                 </Grid>
-              </Box>
+              </Grid>
             </Card>
 
-            {/* Selected Work Items */}
-            <Card sx={{ borderRadius: 0 }}>
-              <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FileText size={18} color="#0d9488" />
-                <Typography variant="subtitle1" fontWeight={700}>Selected Services</Typography>
+            {/* Merged Services & Estimate Summary Card */}
+            <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+              <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#ffffff' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <FileText size={18} color="#0d9488" />
+                  <Typography variant="subtitle1" fontWeight={700}>Selected Services & Estimate Breakdown</Typography>
+                </Box>
+                <StatusBadge status={displayJobCard.status} />
               </Box>
-              <Box sx={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 300 }}>
+
+              {/* Selected Initial Services Table */}
+              <Box sx={{ overflowX: 'auto' }}>
                 <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                   <Box component="thead">
-                    <Box component="tr" sx={{ bgcolor: 'rgba(18, 52, 59, 0.02)', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Box component="tr" sx={{ bgcolor: 'rgba(18, 52, 59, 0.02)', borderBottom: '1px solid #e2e8f0' }}>
                       <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary' }}>Service Description</Box>
                       <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'right', color: 'text.secondary', width: 100 }}>Quantity</Box>
                       <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'center', color: 'text.secondary', width: 130 }}>Status</Box>
@@ -293,7 +724,7 @@ export default function JobCardDetailPage() {
                       </Box>
                     ) : (
                       defaultServices.map((service, index) => (
-                        <Box component="tr" key={index} sx={{ borderBottom: index < defaultServices.length - 1 ? '1px solid' : 'none', borderColor: 'divider' }}>
+                        <Box component="tr" key={index} sx={{ borderBottom: index < defaultServices.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                           <Box component="td" sx={{ p: 2, fontWeight: 500 }}>{service.name}</Box>
                           <Box component="td" sx={{ p: 2, textAlign: 'right', color: 'text.secondary' }}>x{service.quantity || 1}</Box>
                           <Box component="td" sx={{ p: 2, textAlign: 'center' }}>
@@ -308,34 +739,26 @@ export default function JobCardDetailPage() {
                   </Box>
                 </Box>
               </Box>
-            </Card>
 
-            {/* Additional Work & Services */}
-            {additionalServices.length > 0 && (
-              <Card sx={{ borderRadius: 0 }}>
-                <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <PlusCircle size={18} color="#0d9488" />
-                  <Typography variant="subtitle1" fontWeight={700}>Additional Work & Services</Typography>
-                </Box>
-                <Box sx={{ overflowX: 'auto' }}>
-                  <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-                    <Box component="thead">
-                      <Box component="tr" sx={{ bgcolor: 'rgba(18, 52, 59, 0.02)', borderBottom: '1px solid', borderColor: 'divider' }}>
-                        <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary' }}>Service Description</Box>
-                        <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'center', color: 'text.secondary', width: 120 }}>Status</Box>
-                        <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'right', color: 'text.secondary', width: 150 }}>Rate</Box>
-                      </Box>
-                    </Box>
-                    <Box component="tbody">
-                      {additionalServices.length === 0 ? (
-                        <Box component="tr">
-                          <Box component="td" colSpan="3" sx={{ p: 3, textAlign: 'center', fontStyle: 'italic', color: 'text.disabled' }}>
-                            No additional services registered.
-                          </Box>
+              {/* Additional Work & Services Sub-section */}
+              {additionalServices.length > 0 && (
+                <Box sx={{ borderTop: '1px solid #e2e8f0' }}>
+                  <Box sx={{ p: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PlusCircle size={16} color="#0d9488" />
+                    <Typography variant="subtitle2" fontWeight={700}>Additional Work & Services</Typography>
+                  </Box>
+                  <Box sx={{ overflowX: 'auto' }}>
+                    <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                      <Box component="thead">
+                        <Box component="tr" sx={{ bgcolor: 'rgba(18, 52, 59, 0.02)', borderBottom: '1px solid #e2e8f0' }}>
+                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary' }}>Service Description</Box>
+                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'center', color: 'text.secondary', width: 130 }}>Status</Box>
+                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'right', color: 'text.secondary', width: 150 }}>Rate</Box>
                         </Box>
-                      ) : (
-                        additionalServices.map((service, index) => (
-                          <Box component="tr" key={index} sx={{ borderBottom: index < additionalServices.length - 1 ? '1px solid' : 'none', borderColor: 'divider' }}>
+                      </Box>
+                      <Box component="tbody">
+                        {additionalServices.map((service, index) => (
+                          <Box component="tr" key={index} sx={{ borderBottom: index < additionalServices.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                             <Box component="td" sx={{ p: 2, fontWeight: 500 }}>{service.name}</Box>
                             <Box component="td" sx={{ p: 2, textAlign: 'center' }}>
                               <StatusBadge status={service.status} />
@@ -344,17 +767,55 @@ export default function JobCardDetailPage() {
                               {formatCurrency(service.price)}
                             </Box>
                           </Box>
-                        ))
-                      )}
+                        ))}
+                      </Box>
                     </Box>
                   </Box>
                 </Box>
-              </Card>
-            )}
+              )}
+
+              {/* Estimate Summary Integrated Box */}
+              <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  ESTIMATE SUMMARY
+                </Typography>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">Base Subtotal</Typography>
+                  <Typography variant="body2" fontWeight={700}>{formatCurrency(baseSubtotal)}</Typography>
+                </Box>
+
+                {approvedAdditionalTotal > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Additional Work</Typography>
+                    <Typography variant="body2" fontWeight={700}>{formatCurrency(approvedAdditionalTotal)}</Typography>
+                  </Box>
+                )}
+
+                {discountAmount > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Discount</Typography>
+                    <Typography variant="body2" fontWeight={700} color="success.main">-{formatCurrency(discountAmount)}</Typography>
+                  </Box>
+                )}
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">Tax ({taxRate}%)</Typography>
+                  <Typography variant="body2" fontWeight={700}>{formatCurrency(totalTaxAmount)}</Typography>
+                </Box>
+
+                <Divider sx={{ my: 0.5, borderStyle: 'dashed' }} />
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle1" fontWeight={800} sx={{ color: '#1e3a8a' }}>Grand Total</Typography>
+                  <Typography variant="h6" fontWeight={900} sx={{ color: '#1e3a8a' }}>{formatCurrency(totalGrandTotal)}</Typography>
+                </Box>
+              </Box>
+            </Card>
 
             {/* Complaints / Notes */}
             {noteItems.length > 0 && (
-              <Card sx={{ borderRadius: 0 }}>
+              <Card sx={{ borderRadius: 3 }}>
                 <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Shield size={18} color="#0d9488" />
                   <Typography variant="subtitle1" fontWeight={700}>Additional Notes & Complaints</Typography>
@@ -372,48 +833,133 @@ export default function JobCardDetailPage() {
                   ))}
                 </Box>
               </Card>)}
-           {/* {Additional Work Messages & Voice Notes} */}
-            {Array.isArray(jobCard?.approvals) && jobCard.approvals.some((a) => a.mechanicExplanation || a.voiceNoteUrl) && (
-              <Card sx={{ borderRadius: 0 }}>
+            {/* Additional Work Messages & Voice Notes */}
+            {Array.isArray(jobCard?.approvals) && jobCard.approvals.some((a) => a.mechanicExplanation || a.voiceNoteUrl || (a.services && a.services.length > 0)) && (
+              <Card sx={{ borderRadius: 3 }}>
                 <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Mic size={18} color="#0d9488" />
                   <Typography variant="subtitle1" fontWeight={700}>Additional Work Messages & Voice Notes</Typography>
                 </Box>
                 <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                  {jobCard.approvals.filter((a) => a.mechanicExplanation || a.voiceNoteUrl).map((approval, idx) => (
-                    <Box key={approval.id || idx} sx={{ p: 2.5, border: '1px solid #e2e8f0', borderRadius: 2, bgcolor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          {approval.approvalCode ? `Approval Request: ${approval.approvalCode}` : `Additional Work Request #${idx + 1}`}
-                        </Typography>
-                        {approval.createdAt && (
-                          <Typography variant="caption" color="text.secondary">
-                            {formatDateTime(approval.createdAt)}
-                          </Typography>
+                  {jobCard.approvals.filter((a) => a.mechanicExplanation || a.voiceNoteUrl || (a.services && a.services.length > 0)).map((approval, idx) => {
+                    const approvalStatus = approval.statusCode || approval.customerResponse || approval.status || 'PENDING';
+                    const approvalServices = (approval.services && approval.services.length > 0)
+                      ? approval.services
+                      : (jobCard.services || []).filter((s) => s.isAdditional && (s.jobCardApprovalId === approval.id || s.approvalId === approval.id || s.approval_id === approval.id));
+
+                    const approvalKey = approval.id || `approval-${idx}`;
+                    const isExpanded = expandedApprovalIds[approvalKey] ?? (idx === 0);
+
+                    const toggleExpand = () => {
+                      setExpandedApprovalIds(prev => ({ ...prev, [approvalKey]: !isExpanded }));
+                    };
+
+                    return (
+                      <Box key={approvalKey} sx={{ border: '1px solid #e2e8f0', borderRadius: 2, bgcolor: '#f8fafc', overflow: 'hidden' }}>
+                        {/* Clickable Header Bar */}
+                        <Box
+                          onClick={toggleExpand}
+                          sx={{
+                            p: 2,
+                            display: 'flex',
+                            justify: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            bgcolor: isExpanded ? '#ffffff' : '#f8fafc',
+                            borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none',
+                            '&:hover': { bgcolor: '#f1f5f9' },
+                            transition: 'all 0.15s ease-in-out'
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Box sx={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: '50%',
+                              bgcolor: isExpanded ? '#0d9488' : '#e2e8f0',
+                              color: isExpanded ? '#ffffff' : '#475569',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              transition: 'all 0.2s ease-in-out'
+                            }}>
+                              {isExpanded ? <Minus size={16} /> : <Plus size={16} />}
+                            </Box>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              {approval.approvalCode ? `Approval Request: ${approval.approvalCode}` : `Additional Work Request #${idx + 1}`}
+                            </Typography>
+                            <StatusBadge status={approvalStatus} />
+                          </Box>
+
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            {approval.createdAt && (
+                              <Typography variant="caption" color="text.secondary">
+                                {formatDateTime(approval.createdAt)}
+                              </Typography>
+                            )}
+                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleExpand(); }} sx={{ color: '#64748b' }}>
+                              {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                            </IconButton>
+                          </Box>
+                        </Box>
+
+                        {/* Expandable Content (Services, Text Message, Voice Note) */}
+                        {isExpanded && (
+                          <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5, bgcolor: '#f8fafc' }}>
+                            {/* Additional Work Name & Accept/Reject Status */}
+                            {approvalServices && approvalServices.length > 0 && (
+                              <Box sx={{ p: 1.5, bgcolor: '#ffffff', borderRadius: 1.5, border: '1px solid #e2e8f0' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', mb: 1 }}>
+                                  Requested Additional Services
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                  {approvalServices.map((srv, sIdx) => (
+                                    <Box key={sIdx} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <Typography variant="body2" fontWeight={600} sx={{ color: '#0f172a' }}>
+                                        {srv.serviceName || srv.name}
+                                      </Typography>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        {srv.price > 0 && (
+                                          <Typography variant="body2" fontWeight={700} sx={{ color: '#334155' }}>
+                                            {formatCurrency(srv.price)}
+                                          </Typography>
+                                        )}
+                                        <StatusBadge status={srv.statusCode || srv.status || approvalStatus} />
+                                      </Box>
+                                    </Box>
+                                  ))}
+                                </Box>
+                              </Box>
+                            )}
+
+                            {approval.mechanicExplanation && (
+                              <Box>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
+                                  Explanation / Message
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: '#1e293b', bgcolor: '#ffffff', p: 1.5, borderRadius: 1, border: '1px solid #e2e8f0', whiteSpace: 'pre-wrap' }}>
+                                  {approval.mechanicExplanation}
+                                </Typography>
+                              </Box>
+                            )}
+
+                            {approval.voiceNoteUrl && (
+                              <Box sx={{ p: 2, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 800, color: '#047857', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Mic size={16} /> Recorded Voice Note Audio:
+                                </Typography>
+                                <audio controls src={approval.voiceNoteUrl} style={{ width: '100%', height: 40 }} />
+                              </Box>
+                            )}
+                          </Box>
                         )}
                       </Box>
-
-                      {approval.mechanicExplanation && (
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
-                            Explanation / Message
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#1e293b', bgcolor: '#ffffff', p: 1.5, borderRadius: 1, border: '1px solid #e2e8f0', whiteSpace: 'pre-wrap' }}>
-                            {approval.mechanicExplanation}
-                          </Typography>
-                        </Box>
-                      )}
-
-                      {approval.voiceNoteUrl && (
-                        <Box sx={{ p: 2, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#047857', display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Mic size={16} /> Recorded Voice Note Audio:
-                          </Typography>
-                          <audio controls src={approval.voiceNoteUrl} style={{ width: '100%', height: 40 }} />
-                        </Box>
-                      )}
-                    </Box>
-                  ))}
+                    );
+                  })}
                 </Box>
               </Card>
             )}
@@ -425,40 +971,188 @@ export default function JobCardDetailPage() {
         <Grid item xs={12} lg={4}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, position: 'sticky', top: 80 }}>
 
-            {/* Status & Estimate Overview */}
-            <Card sx={{ borderRadius: 0 }}>
-              <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="subtitle1" fontWeight={700}>Estimate Summary</Typography>
-                <StatusBadge status={displayJobCard.status} />
+            {/* JOB PROGRESS Timeline Card */}
+            <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', p: 3, bgcolor: '#ffffff' }}>
+              <Box sx={{ pb: 2, mb: 2.5, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <MapPin size={16} color="#ef4444" />
+                <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  JOB PROGRESS
+                </Typography>
               </Box>
-              <Box sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">Base Subtotal</Typography>
-                    <Typography variant="body2">{formatCurrency(Math.max(0, totalSubtotal - approvedAdditionalTotal))}</Typography>
-                  </Box>
-                  {approvedAdditionalTotal > 0 && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" color="text.secondary">Additional Work</Typography>
-                      <Typography variant="body2">{formatCurrency(approvedAdditionalTotal)}</Typography>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
+                {timelineSteps.map((step, index) => {
+                  const isLast = index === timelineSteps.length - 1;
+
+                  return (
+                    <Box key={step.id || index} sx={{ display: 'flex', gap: 2, position: 'relative', pb: isLast ? 0 : 2.5 }}>
+                      {/* Connecting Vertical Line */}
+                      {!isLast && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            left: 10,
+                            top: 22,
+                            bottom: 0,
+                            width: 2,
+                            bgcolor: step.state === 'completed' ? '#a7f3d0' : '#e2e8f0',
+                            zIndex: 0
+                          }}
+                        />
+                      )}
+
+                      {/* Icon Circle */}
+                      <Box
+                        sx={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 1,
+                          bgcolor: '#ffffff',
+                          border: step.state === 'completed'
+                            ? '2px solid #10b981'
+                            : step.state === 'active'
+                              ? '2px solid #2563eb'
+                              : '2px solid #cbd5e1',
+                          boxShadow: step.state === 'active' ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none',
+                          flexShrink: 0,
+                          mt: 0.25
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: step.state === 'active' ? 10 : 8,
+                            height: step.state === 'active' ? 10 : 8,
+                            borderRadius: '50%',
+                            bgcolor: step.state === 'completed'
+                              ? '#10b981'
+                              : step.state === 'active'
+                                ? '#2563eb'
+                                : '#cbd5e1'
+                          }}
+                        />
+                      </Box>
+
+                      {/* Content */}
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight={700}
+                          sx={{
+                            color: step.state === 'completed' || step.state === 'active' ? '#0f172a' : '#64748b',
+                            lineHeight: 1.2
+                          }}
+                        >
+                          {step.title}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: '#64748b',
+                            display: 'block',
+                            mt: 0.3,
+                            fontWeight: 500,
+                            fontSize: '0.78rem'
+                          }}
+                        >
+                          {step.subtitle}
+                        </Typography>
+                      </Box>
                     </Box>
-                  )}
-                  {discountAmount > 0 && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" color="text.secondary">Discount</Typography>
-                      <Typography variant="body2" color="success.main">-{formatCurrency(discountAmount)}</Typography>
-                    </Box>
-                  )}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">Tax ({taxRate}%)</Typography>
-                    <Typography variant="body2">{formatCurrency(totalTaxAmount)}</Typography>
-                  </Box>
-                  <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', color: 'primary.main' }}>
-                    <Typography variant="subtitle1" fontWeight={800}>Grand Total</Typography>
-                    <Typography variant="subtitle1" fontWeight={800}>{formatCurrency(totalGrandTotal)}</Typography>
-                  </Box>
+                  );
+                })}
+              </Box>
+            </Card>
+
+            {/* TIME TRACKER Card */}
+            <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', p: 3, bgcolor: '#ffffff' }}>
+              <Box sx={{ pb: 2, mb: 2.5, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Clock size={16} color="#64748b" />
+                <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  TIME TRACKER
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                  <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time at gate</Typography>
+                  <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif' }}>{gateTimeFormatted}</Typography>
                 </Box>
+
+                {hasMechanicalWork && (
+                  <>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Mech started</Typography>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif' }}>{mechStartFormatted}</Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in mech</Typography>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInMechFormatted}</Typography>
+                    </Box>
+                  </>
+                )}
+
+                {hasBodyshopWork && (
+                  <>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Body Shop started</Typography>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif' }}>{bodyshopStartFormatted}</Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in Body Shop</Typography>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInBodyshopFormatted}</Typography>
+                    </Box>
+                  </>
+                )}
+
+                {addlAssignments.length > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                    <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in Addl Work</Typography>
+                    <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInAddlFormatted}</Typography>
+                  </Box>
+                )}
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+                  <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Promised delivery</Typography>
+                  <Typography variant="body2" fontWeight={700} sx={{ color: '#2563eb', fontFamily: 'monospace, sans-serif' }}>{promisedDeliveryFormatted}</Typography>
+                </Box>
+
+                {/* Bottom Highlight Pill */}
+                <Box
+                  sx={{
+                    p: 1.5,
+                    bgcolor: remainingPill.bg,
+                    borderRadius: 2,
+                    border: `1px solid ${remainingPill.border}`,
+                    textAlign: 'center',
+                    mt: 0.5
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600} sx={{ color: remainingPill.color, fontSize: '0.85rem' }}>
+                    {remainingPill.text}
+                  </Typography>
+                </Box>
+              </Box>
+            </Card>
+
+            {/* Supervisor Notes Card */}
+            <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', p: 3, bgcolor: '#ffffff' }}>
+              <Box sx={{ pb: 1.5, mb: 2, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <ClipboardList size={16} color="#2563eb" />
+                <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  SUPERVISOR NOTES
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                <Typography variant="body2" sx={{ color: supervisorNotesText ? '#1e293b' : '#94a3b8', fontStyle: supervisorNotesText ? 'normal' : 'italic', whiteSpace: 'pre-wrap', fontWeight: 500 }}>
+                  {supervisorNotesText || 'No supervisor notes added for this job card.'}
+                </Typography>
               </Box>
             </Card>
 
@@ -696,6 +1390,194 @@ export default function JobCardDetailPage() {
               </Box>
             </Card>
 
+            {/* Vehicle Photos Gallery Card */}
+            <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', p: 3, bgcolor: '#ffffff' }}>
+              <Box sx={{ pb: 1.5, mb: 2.5, borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <ImageIcon size={18} color="#2563eb" />
+                  <Typography variant="subtitle1" fontWeight={700}>Vehicle Inspection & Photos</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Chip label={`${vehiclePhotos.length} Photo${vehiclePhotos.length === 1 ? '' : 's'}`} size="small" sx={{ fontWeight: 700, bgcolor: vehiclePhotos.length > 0 ? '#eff6ff' : '#f1f5f9', color: vehiclePhotos.length > 0 ? '#2563eb' : '#64748b', fontSize: '0.75rem' }} />
+                  {vehiclePhotos.length > 0 && (
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748b' }}>
+                      Click photo for full screen
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+
+              {vehiclePhotos.length === 0 ? (
+                <Box sx={{ border: '1px dashed #cbd5e1', borderRadius: 2, p: 3, textAlign: 'center', bgcolor: '#f8fafc' }}>
+                  <ImageIcon size={32} color="#94a3b8" style={{ marginBottom: 8 }} />
+                  <Typography variant="body2" fontWeight={600} sx={{ color: '#475569' }}>
+                    No Vehicle Photos Uploaded
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                    Inspection photos uploaded during CRM job card creation will appear here.
+                  </Typography>
+                </Box>
+              ) : (
+                <>
+                  {/* Main Photo Preview Box */}
+                  <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', bgcolor: '#0f172a', height: { xs: 200, sm: 240 }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Box
+                      component="img"
+                      src={vehiclePhotos[activePhotoIdx]?.url}
+                      alt={vehiclePhotos[activePhotoIdx]?.category || 'Vehicle Photo'}
+                      onClick={() => setIsPhotoLightboxOpen(true)}
+                      sx={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
+                    />
+
+                    {/* Left Carousel Arrow */}
+                    {vehiclePhotos.length > 1 && (
+                      <IconButton
+                        onClick={(e) => { e.stopPropagation(); setActivePhotoIdx((prev) => (prev - 1 + vehiclePhotos.length) % vehiclePhotos.length); }}
+                        sx={{ position: 'absolute', left: 8, bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#ffffff' }, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
+                        size="small"
+                      >
+                        <ChevronLeft size={18} color="#0f172a" />
+                      </IconButton>
+                    )}
+
+                    {/* Right Carousel Arrow */}
+                    {vehiclePhotos.length > 1 && (
+                      <IconButton
+                        onClick={(e) => { e.stopPropagation(); setActivePhotoIdx((prev) => (prev + 1) % vehiclePhotos.length); }}
+                        sx={{ position: 'absolute', right: 8, bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#ffffff' }, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
+                        size="small"
+                      >
+                        <ChevronRight size={18} color="#0f172a" />
+                      </IconButton>
+                    )}
+
+                    {/* Bottom Category Label */}
+                    {vehiclePhotos[activePhotoIdx]?.category && (
+                      <Chip
+                        label={vehiclePhotos[activePhotoIdx].category}
+                        size="small"
+                        sx={{ position: 'absolute', bottom: 8, left: 8, bgcolor: 'rgba(15, 23, 42, 0.75)', color: '#ffffff', fontWeight: 600, fontSize: '0.7rem', backdropFilter: 'blur(4px)' }}
+                      />
+                    )}
+                  </Box>
+
+                  {/* Thumbnails Row */}
+                  {vehiclePhotos.length > 1 && (
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1.5, overflowX: 'auto', pb: 0.5 }}>
+                      {vehiclePhotos.map((photo, idx) => (
+                        <Box
+                          key={photo.id || idx}
+                          onClick={() => setActivePhotoIdx(idx)}
+                          sx={{
+                            width: 60,
+                            height: 48,
+                            borderRadius: 1.5,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            border: activePhotoIdx === idx ? '2px solid #2563eb' : '2px solid transparent',
+                            opacity: activePhotoIdx === idx ? 1 : 0.65,
+                            transition: 'all 0.15s ease',
+                            flexShrink: 0,
+                            bgcolor: '#0f172a'
+                          }}
+                        >
+                          <Box
+                            component="img"
+                            src={photo.url}
+                            alt={photo.category || `Thumbnail ${idx + 1}`}
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </>
+              )}
+            </Card>
+
+            {/* Fullscreen Modal Lightbox */}
+            {isPhotoLightboxOpen && vehiclePhotos.length > 0 && (
+              <Modal
+                show={isPhotoLightboxOpen}
+                onHide={() => setIsPhotoLightboxOpen(false)}
+                title=""
+                size="lg"
+              >
+                <Box sx={{ position: 'relative', width: '100%', minHeight: '75vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#0f172a', borderRadius: 2, p: 2 }}>
+                  {/* Close X Button */}
+                  <IconButton
+                    onClick={() => setIsPhotoLightboxOpen(false)}
+                    sx={{ position: 'absolute', top: 12, right: 12, color: '#ffffff', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }, zIndex: 10 }}
+                  >
+                    <X size={20} />
+                  </IconButton>
+
+                  {/* Main Fullscreen Image */}
+                  <Box sx={{ width: '100%', height: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Box
+                      component="img"
+                      src={vehiclePhotos[activePhotoIdx]?.url}
+                      alt={vehiclePhotos[activePhotoIdx]?.category || 'Vehicle Photo Fullscreen'}
+                      sx={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', borderRadius: 1.5 }}
+                    />
+                  </Box>
+
+                  {/* Navigation Arrows */}
+                  {vehiclePhotos.length > 1 && (
+                    <IconButton
+                      onClick={() => setActivePhotoIdx((prev) => (prev - 1 + vehiclePhotos.length) % vehiclePhotos.length)}
+                      sx={{ position: 'absolute', left: 16, top: '45%', color: '#ffffff', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}
+                    >
+                      <ChevronLeft size={28} />
+                    </IconButton>
+                  )}
+
+                  {vehiclePhotos.length > 1 && (
+                    <IconButton
+                      onClick={() => setActivePhotoIdx((prev) => (prev + 1) % vehiclePhotos.length)}
+                      sx={{ position: 'absolute', right: 16, top: '45%', color: '#ffffff', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}
+                    >
+                      <ChevronRight size={28} />
+                    </IconButton>
+                  )}
+
+                  {/* Category Badge & Index */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                    <Typography variant="body2" sx={{ color: '#94a3b8', fontWeight: 600 }}>
+                      {activePhotoIdx + 1} of {vehiclePhotos.length}
+                    </Typography>
+                    {vehiclePhotos[activePhotoIdx]?.category && (
+                      <Chip label={vehiclePhotos[activePhotoIdx].category} size="small" sx={{ bgcolor: '#2563eb', color: '#ffffff', fontWeight: 700 }} />
+                    )}
+                  </Box>
+
+                  {/* Thumbnails Strip in Lightbox */}
+                  {vehiclePhotos.length > 1 && (
+                    <Box sx={{ display: 'flex', gap: 1.5, mt: 2, overflowX: 'auto', maxWidth: '90%', pb: 1 }}>
+                      {vehiclePhotos.map((photo, idx) => (
+                        <Box
+                          key={photo.id || idx}
+                          onClick={() => setActivePhotoIdx(idx)}
+                          sx={{
+                            width: 64,
+                            height: 52,
+                            borderRadius: 1.5,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            border: activePhotoIdx === idx ? '2px solid #2563eb' : '2px solid transparent',
+                            opacity: activePhotoIdx === idx ? 1 : 0.5,
+                            flexShrink: 0
+                          }}
+                        >
+                          <Box component="img" src={photo.url} alt={`Thumb ${idx}`} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              </Modal>
+            )}
+
           </Box>
         </Grid>
       </Grid>
@@ -756,42 +1638,48 @@ export default function JobCardDetailPage() {
             Resuming this service will reassign it and lock the bay.
           </Typography>
 
-          <FormControl fullWidth size="small">
-            <InputLabel>Select Mechanic</InputLabel>
+          <FormControl fullWidth size="small" variant="outlined">
+            <InputLabel>Mechanic</InputLabel>
             <Select
               value={selectedMechanic}
-              label="Select Mechanic"
+              label="Mechanic"
               onChange={(e) => setSelectedMechanic(e.target.value)}
               sx={{ borderRadius: 2 }}
             >
               {isMechanicsLoading && <MenuItem disabled value="">Loading mechanics...</MenuItem>}
               {!isMechanicsLoading && mechanics.length === 0 && <MenuItem disabled value="">No active mechanics found</MenuItem>}
-              {mechanics.map((mechanic) => (
-                <MenuItem key={mechanic.id} value={mechanic.id}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 2 }}>
-                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                      {mechanic.fullName}{mechanic.employeeCode ? ` (${mechanic.employeeCode})` : ''}
-                    </Typography>
-                    <Chip
-                      size="small"
-                      label={mechanic.availabilityLabel || (mechanic.activeJobCount > 0 ? `Busy (${mechanic.activeJobCount})` : 'Available')}
-                      sx={{
-                        height: 22, fontSize: '0.68rem', fontWeight: 800,
-                        bgcolor: mechanic.activeJobCount > 0 ? '#FEF3C7' : '#DCFCE7',
-                        color: mechanic.activeJobCount > 0 ? '#B45309' : '#15803D'
-                      }}
-                    />
-                  </Box>
-                </MenuItem>
-              ))}
+              {mechanics.map((mechanic) => {
+                const isBusy = mechanic.activeJobCount > 0;
+                const statusText = mechanic.availabilityLabel || (isBusy ? `Busy (${mechanic.activeJobCount} job${mechanic.activeJobCount > 1 ? 's' : ''})` : 'Available');
+                return (
+                  <MenuItem key={mechanic.id} value={mechanic.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 2 }}>
+                      <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                        {mechanic.fullName}{mechanic.employeeCode ? ` - ${mechanic.employeeCode}` : ''}
+                      </Typography>
+                      <Chip
+                        size="small"
+                        label={statusText}
+                        sx={{
+                          height: 20, fontSize: '0.68rem', fontWeight: 700,
+                          bgcolor: isBusy ? '#FEF3C7' : '#DCFCE7',
+                          color: isBusy ? '#B45309' : '#15803D',
+                          border: '1px solid',
+                          borderColor: isBusy ? '#FCD34D' : '#86EFAC'
+                        }}
+                      />
+                    </Box>
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
 
-          <FormControl fullWidth size="small">
-            <InputLabel>Bay Number</InputLabel>
+          <FormControl fullWidth size="small" variant="outlined">
+            <InputLabel>Bay</InputLabel>
             <Select
               value={selectedBay}
-              label="Bay Number"
+              label="Bay"
               onChange={(e) => setSelectedBay(e.target.value)}
               sx={{ borderRadius: 2 }}
             >
@@ -799,19 +1687,22 @@ export default function JobCardDetailPage() {
               {!isBaysLoading && bays.length === 0 && <MenuItem disabled value="">No active bays found</MenuItem>}
               {bays.map((bay) => {
                 const isBusy = bay.availability === 'BUSY';
+                const statusText = bay.availabilityLabel || (isBusy ? 'Busy' : 'Available');
                 return (
                   <MenuItem key={bay.id} value={bay.id} disabled={isBusy}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 2 }}>
-                      <Typography sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                      <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
                         {bay.bayName || bay.bayCode}
                       </Typography>
                       <Chip
                         size="small"
-                        label={bay.availabilityLabel || (isBusy ? 'Busy' : 'Available')}
+                        label={statusText}
                         sx={{
-                          height: 22, fontSize: '0.68rem', fontWeight: 800,
+                          height: 20, fontSize: '0.68rem', fontWeight: 700,
                           bgcolor: isBusy ? '#FEF3C7' : '#DCFCE7',
-                          color: isBusy ? '#B45309' : '#15803D'
+                          color: isBusy ? '#B45309' : '#15803D',
+                          border: '1px solid',
+                          borderColor: isBusy ? '#FCD34D' : '#86EFAC'
                         }}
                       />
                     </Box>
