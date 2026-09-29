@@ -226,7 +226,7 @@ export default function AssignMechanicList() {
           <Box sx={{ display: 'flex', gap: 1 }}>
             {canSkip && (
               <Button
-                variant="outlined"
+                variant="outline"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -314,7 +314,7 @@ export default function AssignMechanicList() {
           ].map((tab) => (
             <Button
               key={tab.key}
-              variant={activeTab === tab.key ? 'primary' : 'outlined'}
+              variant={activeTab === tab.key ? 'primary' : 'outline'}
               size="sm"
               onClick={() => {
                 setActiveTab(tab.key);

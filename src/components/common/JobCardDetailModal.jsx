@@ -448,7 +448,7 @@ export default function JobCardDetailModal({
         }}
       >
         <Button
-          variant="outlined"
+          variant="outline"
           size="sm"
           leftIcon={ExternalLink}
           onClick={handleOpenFullPage}
