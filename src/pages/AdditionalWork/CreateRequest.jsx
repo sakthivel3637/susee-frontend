@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Card, Checkbox, Chip, Divider, FormControlLabel, Grid, TextField, Typography, } from '@mui/material';
 import { ArrowLeft, Car, ClipboardList, MessageCircle, MessageSquare, Mic, Send, Wrench, } from 'lucide-react';
@@ -63,7 +63,7 @@ function InfoItem({ label, value }) {
 
 function SectionCard({ icon: Icon, title, children, action }) {
   return (
-    <Card sx={{ borderRadius: 0, border: '1px solid #E2E8F0', boxShadow: 'none' }}>
+    <Card sx={{ borderRadius: 3, border: '1px solid #E2E8F0', boxShadow: 'none' }}>
       <Box sx={{ p: 2.25, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Icon size={18} color="#0F766E" />
@@ -319,8 +319,10 @@ export function AdditionalWorkRequestScreen({
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const jobCardId = searchParams.get('jobCardId');
+  const fromParam = searchParams.get('from');
   const categoryParam = searchParams.get('category') || searchParams.get('department') || defaultCategory;
 
   const { data: contextPayload, isLoading } = useQuery({
@@ -436,7 +438,7 @@ export function AdditionalWorkRequestScreen({
       await queryClient.invalidateQueries({ queryKey: ['additional-work-requests'] });
       await queryClient.invalidateQueries({ queryKey: ['job-cards'] });
       toastSuccess(response?.message || resolvedSuccessMessage || 'Additional work approved successfully.');
-      navigate(listRoute);
+      navigate(fromParam || listRoute, { state: location.state });
     } catch (error) {
       toastError(error?.message || 'Unable to send additional work approval.');
     } finally {
@@ -469,8 +471,8 @@ export function AdditionalWorkRequestScreen({
         subtitle={resolvedSubtitle}
         breadcrumbs={[{ label: resolvedDomainLabel, path: listRoute }, { label: jobCard.jobCardNo || jobCard.slug || jobCard.id }]}
         actions={
-          <Button variant="back" leftIcon={ArrowLeft} onClick={() => navigate(backRoute)}>
-            Back to Job Cards
+          <Button variant="back" leftIcon={ArrowLeft} onClick={() => navigate(fromParam || backRoute)}>
+            {fromParam ? 'Back to Edit Job Card' : 'Back to Job Cards'}
           </Button>
         }
       />
@@ -478,33 +480,169 @@ export function AdditionalWorkRequestScreen({
       <Grid container spacing={3}>
         <Grid item xs={12} lg={8}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <SectionCard icon={Car} title={resolvedVehicleTitle}>
+            <Card sx={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', p: 3 }}>
+              <Box sx={{ pb: 1.5, mb: 3, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Car size={18} color="#dc2626" />
+                <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  VEHICLE & CUSTOMER DETAILS
+                </Typography>
+              </Box>
+
               <Grid container spacing={3}>
+                {/* CUSTOMER COLUMN */}
                 <Grid item xs={12} md={6}>
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: '#2563EB', color: '#FFF', display: 'grid', placeItems: 'center', fontWeight: 800 }}>
-                      {(jobCard.ownerName || 'C').slice(0, 1)}
+                  <Box sx={{ pr: { md: 2 } }}>
+                    <Typography variant="caption" fontWeight={800} sx={{ color: '#94a3b8', letterSpacing: '0.08em', display: 'block', mb: 2, textTransform: 'uppercase' }}>
+                      CUSTOMER
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2.5 }}>
+                      <Box sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        bgcolor: '#2563eb',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 800,
+                        fontSize: '1rem',
+                        flexShrink: 0
+                      }}>
+                        {(jobCard.ownerName || 'C').split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#0f172a', lineHeight: 1.2 }}>
+                          {jobCard.ownerName || '—'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.25 }}>
+                          {formatPhone(jobCard.ownerMobile || jobCard.mobile) || '—'}
+                        </Typography>
+                      </Box>
                     </Box>
-                    <Box>
-                      <Typography sx={{ fontWeight: 800, color: '#0F172A' }}>{jobCard.ownerName}</Typography>
-                      <Typography variant="body2" sx={{ color: '#64748B' }}>{formatPhone(jobCard.ownerMobile || jobCard.mobile)}</Typography>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Job Card No.:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#334155' }}>
+                            {jobCard.jobCardNo || jobCardId || '—'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Entry Time:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {jobCard.createdAt ? formatDate(jobCard.createdAt) : '—'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Est. Delivery:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#0d9488' }}>
+                            {jobCard.expectedDeliveryAt ? formatDate(jobCard.expectedDeliveryAt) : '—'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Service Type:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {activeDepartment === 'body-shop' ? 'Body Shop' : 'Mechanical'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
                     </Box>
                   </Box>
                 </Grid>
-                <Grid item xs={12} md={6}>
-                  <VehicleNumberPlate vehicleNumber={jobCard.vehicleNumber} />
-                </Grid>
-                <Grid item xs={6} md={3}>
-                  <InfoItem label="Job Card" value={jobCard.jobCardNo} />
-                </Grid>
-                <Grid item xs={6} md={3}>
-                  <InfoItem label="Created" value={formatDate(jobCard.createdAt)} />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <InfoItem label="Brand / Model" value={jobCard.makeModel || jobCard.vehicleInfo || 'Not captured'} />
+
+                {/* VEHICLE COLUMN */}
+                <Grid item xs={12} md={6} sx={{ borderLeft: { md: '1px solid #f1f5f9' }, pl: { md: 3 } }}>
+                  <Box>
+                    <Typography variant="caption" fontWeight={800} sx={{ color: '#94a3b8', letterSpacing: '0.08em', display: 'block', mb: 2, textTransform: 'uppercase' }}>
+                      VEHICLE
+                    </Typography>
+
+                    <Typography variant="h4" fontWeight={800} sx={{ color: '#1e40af', letterSpacing: '0.05em', mb: 2, fontFamily: 'monospace, sans-serif' }}>
+                      {jobCard.vehicleNumber || '—'}
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Make/Model:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a' }}>
+                            {jobCard.makeModel || '—'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Colour:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {jobCard.vehicleColor || jobCard.color || 'White'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Fuel:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {jobCard.fuelType || 'Petrol'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Mechanic:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {jobCard.technician
+                              ? Array.from(new Set(String(jobCard.technician).split(',').map((s) => s.trim()))).filter(Boolean).join(', ')
+                              : 'Unassigned'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={5}>
+                          <Typography variant="body2" color="text.secondary" fontWeight={500}>Bay:</Typography>
+                        </Grid>
+                        <Grid item xs={7}>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
+                            {jobCard.bayName || '—'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Box>
                 </Grid>
               </Grid>
-            </SectionCard>
+            </Card>
 
             <SectionCard icon={ClipboardList} title={resolvedCurrentTitle}>
               <Box sx={{ overflowX: 'auto' }}>

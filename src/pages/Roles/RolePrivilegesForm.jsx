@@ -51,6 +51,9 @@ const flattenMenus = (menus) => {
 
 const formatModuleName = (slug) => {
   if (!slug) return "";
+  const lower = String(slug).toLowerCase();
+  if (lower === 'mechanic' || lower === 'mechanical') return 'Mechanical';
+  if (lower === 'body-shop-mechanic' || lower === 'body-shop-supervisor' || lower === 'body-shop') return 'Body Shop';
   return slug
     .split(/[-_]/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())

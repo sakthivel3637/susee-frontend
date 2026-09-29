@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Box, Card, Typography, IconButton, Menu, MenuItem, Select, Chip, Tabs, Tab } from '@mui/material';
 import DataTable from '../../components/common/DataTable';
 import { Plus, Eye, Edit, MoreVertical, PlusCircle, MessageCircle, ArrowUp, ArrowDown } from 'lucide-react';
@@ -9,7 +9,7 @@ import Button from '../../components/common/Button';
 import SearchBar from '../../components/common/SearchBar';
 import PageHeader from '../../components/shared/PageHeader';
 import VehicleNumberPlate from '../../components/common/VehicleNumberPlate';
-import { formatDateTime, formatCurrency } from '../../utils/formatters';
+import { formatDate, formatDateTime, formatCurrency } from '../../utils/formatters';
 import { useDebounce } from '../../hooks/useDebounce';
 import { ROUTES } from '../../config/routes';
 import useAuthStore from '../../store/useAuthStore';
@@ -59,7 +59,15 @@ export default function JobCardList() {
     bodyshop: 'assignedAt',
     delivery: 'createdAt',
   };
-  const [activeTab, setActiveTab] = useState('mechanic');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'mechanic');
+
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+  }, [location.state?.activeTab]);
+
   // When the status dropdown is used, it overrides the tab filter
   const tabStatusParam = statusFilter ? statusFilter : TAB_STATUS_CODES[activeTab];
   const tabSortBy = TAB_SORT_BY[activeTab];
@@ -117,10 +125,11 @@ export default function JobCardList() {
           }}
           onClick={() => {
             const statusCode = String(row.currentStatus?.statusCode || row.currentStatus?.code || '').toUpperCase();
+            const rowId = String(row.slug || row.id).toLowerCase();
             if (canUpdateJobCards && !['READY_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_DELIVERED', 'VEHICLE_DELIVERED'].includes(statusCode)) {
-              navigate(`${ROUTES.JOB_CARDS}/edit/${row.slug || row.id}`);
+              navigate(`${ROUTES.JOB_CARDS}/edit/${rowId}`, { state: { activeTab } });
             } else {
-              navigate(`${ROUTES.JOB_CARDS}/view/${row.slug || row.id}`);
+              navigate(`${ROUTES.JOB_CARDS}/view/${rowId}`, { state: { activeTab } });
             }
           }}
         >
@@ -134,10 +143,62 @@ export default function JobCardList() {
         <VehicleNumberPlate vehicleNumber={row.vehicle?.registrationNo} />
       ),
     },
-    { header: 'Owner', render: (row) => row.customer?.fullName || 'N/A' },
-    { header: 'Mobile Number', render: (row) => row.customer?.mobileNo || '-' },
+    {
+      header: 'Owner',
+      render: (row) => (
+        <Box>
+          <Typography variant="body2" fontWeight={600} sx={{ color: '#0f172a' }}>
+            {row.customer?.fullName || row.ownerName || 'N/A'}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 500, mt: 0.25 }}>
+            {row.customer?.mobileNo || row.ownerMobile || row.mobile || '-'}
+          </Typography>
+        </Box>
+      )
+    },
 
-    { header: 'Status', render: (row) => <StatusBadge status={row.currentStatus?.statusCode || 'PENDING'} /> },
+    {
+      header: 'Status',
+      render: (row) => {
+        const hasAdditionalWork =
+          Boolean(row.hasAdditionalWork) ||
+          (Array.isArray(row.services) && row.services.some(s => s.isAdditional)) ||
+          (Array.isArray(row.workAssignments) && row.workAssignments.some(a => a.jobCardService?.isAdditional || a.isAdditional));
+        const rowId = String(row.slug || row.id).toLowerCase();
+
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <StatusBadge status={row.currentStatus?.statusCode || 'PENDING'} />
+            {hasAdditionalWork && (
+              <Chip
+                label="Addl. Work"
+                size="small"
+                title="Click to view job card details for additional work"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`${ROUTES.JOB_CARDS}/view/${rowId}`, { state: { activeTab } });
+                }}
+                sx={{
+                  bgcolor: '#ef4444',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  fontSize: '0.68rem',
+                  height: 22,
+                  cursor: 'pointer',
+                  animation: 'pulse 1.5s infinite ease-in-out',
+                  '@keyframes pulse': {
+                    '0%': { opacity: 1, transform: 'scale(1)' },
+                    '50%': { opacity: 0.45, transform: 'scale(0.96)' },
+                    '100%': { opacity: 1, transform: 'scale(1)' }
+                  },
+                  '&:hover': { bgcolor: '#dc2626' }
+                }}
+              />
+            )}
+          </Box>
+        );
+      }
+    },
     {
       header: 'WORK TYPE',
       accessor: 'workType',
@@ -232,9 +293,42 @@ export default function JobCardList() {
           {sortOrder === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
         </Box>
       ),
-      render: (row) => <Typography variant="body2">{formatDateTime(row.createdAt)}</Typography>
+      render: (row) => (
+        <Box>
+          <Typography variant="body2" fontWeight={600} sx={{ color: '#0f172a' }}>
+            {formatDate(row.createdAt, 'dd MMM yyyy')}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 500, mt: 0.25 }}>
+            {formatDate(row.createdAt, 'hh:mm a')}
+          </Typography>
+        </Box>
+      )
     },
-  ];
+    activeTab !== 'delivery' && activeTab !== 'ready_for_delivery' ? {
+      header: 'Actions',
+      render: (row) => {
+        const statusCode = String(row.currentStatus?.statusCode || row.currentStatus?.code || '').toUpperCase();
+        const rowId = String(row.slug || row.id).toLowerCase();
+        const canEditRow = canUpdateJobCards && !['READY_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_DELIVERED', 'VEHICLE_DELIVERED'].includes(statusCode);
+
+        if (!canEditRow) return null;
+
+        return (
+          <IconButton
+            size="small"
+            title="Edit Job Card"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`${ROUTES.JOB_CARDS}/edit/${rowId}`, { state: { activeTab } });
+            }}
+            sx={{ color: '#d97706' }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        );
+      }
+    } : null
+  ].filter(Boolean);
 
   const tableData = data?.data || [];
 
@@ -387,7 +481,7 @@ export default function JobCardList() {
           onRowsPerPageChange={setRowsPerPage}
           onRowDoubleClick={(row) => {
             if (canReadJobCards) {
-              navigate(`${ROUTES.JOB_CARDS}/view/${row.slug || row.id}`);
+              navigate(`${ROUTES.JOB_CARDS}/view/${String(row.slug || row.id).toLowerCase()}`, { state: { activeTab } });
             }
           }}
         />
@@ -402,7 +496,7 @@ export default function JobCardList() {
         PaperProps={{ sx: { width: 220, borderRadius: 2, mt: 0.5 } }}
       >
         {canReadJobCards && (
-          <MenuItem onClick={() => { handleMenuClose(); navigate(`${ROUTES.JOB_CARDS}/view/${selectedJob?.slug || selectedJob?.id}`); }}>
+          <MenuItem onClick={() => { handleMenuClose(); navigate(`${ROUTES.JOB_CARDS}/view/${String(selectedJob?.slug || selectedJob?.id).toLowerCase()}`, { state: { activeTab } }); }}>
             <Eye size={16} className="mr-3 text-primary" />
             View
           </MenuItem>
@@ -411,7 +505,7 @@ export default function JobCardList() {
           !['READY_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_DELIVERED', 'VEHICLE_DELIVERED'].includes(
             String(selectedJob?.currentStatus?.statusCode || selectedJob?.currentStatus?.code || '').toUpperCase()
           ) && (
-            <MenuItem onClick={() => { handleMenuClose(); navigate(`${ROUTES.JOB_CARDS}/edit/${selectedJob?.slug || selectedJob?.id}`); }}>
+            <MenuItem onClick={() => { handleMenuClose(); navigate(`${ROUTES.JOB_CARDS}/edit/${String(selectedJob?.slug || selectedJob?.id).toLowerCase()}`, { state: { activeTab } }); }}>
               <Edit size={16} className="mr-3 text-warning" />
               Edit
             </MenuItem>
