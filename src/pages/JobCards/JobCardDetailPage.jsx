@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Box, Grid, Card, Typography, Divider, Chip, IconButton, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
 import { ArrowLeft, ArrowRight, Car, User, Shield, FileText, AlertTriangle, PlusCircle, Clock, ChevronDown, ChevronUp, ClipboardList, Wrench, Play, Filter, PauseCircle, PlayCircle, Mic, Plus, Minus, MapPin, Maximize2, X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
@@ -28,6 +28,12 @@ export default function JobCardDetailPage() {
   const [expandedApprovalIds, setExpandedApprovalIds] = useState({});
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [isPhotoLightboxOpen, setIsPhotoLightboxOpen] = useState(false);
+  const [trackerNow, setTrackerNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => setTrackerNow(Date.now()), 60000);
+    return () => window.clearInterval(timerId);
+  }, []);
 
   const { user, role } = useAuthStore();
   const locationId = user?.locationId || user?.location_id || user?.branchId || '';
@@ -432,43 +438,163 @@ export default function JobCardDetailPage() {
     }
   };
 
-  const calculateDurationText = (startedAt, completedAt) => {
-    if (!startedAt) return '—';
-    const startMs = new Date(startedAt).getTime();
-    if (isNaN(startMs)) return '—';
-    const endMs = completedAt ? new Date(completedAt).getTime() : Date.now();
-    if (isNaN(endMs)) return '—';
-
-    const diffMs = Math.max(0, endMs - startMs);
-    const totalMins = Math.floor(diffMs / (1000 * 60));
-    const hrs = Math.floor(totalMins / 60);
-    const mins = totalMins % 60;
-
-    if (hrs > 0) {
-      return `${hrs}h ${String(mins).padStart(2, '0')}m`;
+  // Shows date + time in compact form e.g. "28 Sep, 03:42 pm"
+  const formatDateTimeShort = (dateVal) => {
+    if (!dateVal) return '—';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '—';
+      const day = String(d.getDate()).padStart(2, '0');
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const mon = monthNames[d.getMonth()];
+      const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return `${day} ${mon}, ${timeStr}`;
+    } catch (e) {
+      return '—';
     }
-    return `${mins}m`;
   };
 
-  const gateTimeFormatted = formatTimeOnly(jobCard?.gateEntry?.entryTime || jobCard?.createdAt);
+  const formatTrackerDateTime = (dateVal) => {
+    if (!dateVal) return '—';
+    const date = new Date(dateVal);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZoneName: 'short'
+    }).format(date);
+  };
 
-  const mechStartAt = mechanicalAssignments[0]?.createdAt || jobCard?.startedAt;
-  const mechCompAt = isMechanicalDone ? (mechanicalAssignments[mechanicalAssignments.length - 1]?.completedAt || mechanicalAssignments[0]?.completedAt) : null;
-  const mechStartFormatted = formatTimeOnly(mechStartAt);
-  const timeInMechFormatted = mechStartAt ? calculateDurationText(mechStartAt, mechCompAt) : '—';
+  const getTimeInterval = (startValue, endValue) => {
+    const start = new Date(startValue).getTime();
+    const end = endValue ? new Date(endValue).getTime() : trackerNow;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+    return { start, end };
+  };
 
-  const bodyshopStartAt = bodyshopAssignments[0]?.createdAt;
-  const bodyshopCompAt = isBodyshopDone ? (bodyshopAssignments[bodyshopAssignments.length - 1]?.completedAt || bodyshopAssignments[0]?.completedAt) : null;
-  const bodyshopStartFormatted = formatTimeOnly(bodyshopStartAt);
-  const timeInBodyshopFormatted = bodyshopStartAt ? calculateDurationText(bodyshopStartAt, bodyshopCompAt) : '—';
+  const formatDuration = (durationMs) => {
+    if (durationMs <= 0) return '0m';
+    const totalMinutes = Math.floor(durationMs / 60000);
+    if (totalMinutes === 0) return '<1m';
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return hours > 0 ? `${hours}h ${String(minutes).padStart(2, '0')}m` : `${minutes}m`;
+  };
 
-  const addlAssignments = (jobCard?.workAssignments || []).filter(a => a.jobCardService?.isAdditional || a.service?.isAdditional);
-  const addlStartAt = addlAssignments[0]?.createdAt;
-  const addlCompAt = addlAssignments.length > 0 && addlAssignments.every(a => !!a.completedAt) ? addlAssignments[addlAssignments.length - 1]?.completedAt : null;
-  const timeInAddlFormatted = addlStartAt ? calculateDurationText(addlStartAt, addlCompAt) : '—';
+  const getMergedDurationText = (intervals) => {
+    const validIntervals = intervals.filter(Boolean).sort((a, b) => a.start - b.start);
+    if (validIntervals.length === 0) return '—';
 
-  const deliveryTimeStr = displayJobCard?.expectedDeliveryAt || jobCard?.expectedDeliveryDate;
-  const promisedDeliveryFormatted = formatTimeOnly(deliveryTimeStr);
+    let totalMs = 0;
+    let currentStart = validIntervals[0].start;
+    let currentEnd = validIntervals[0].end;
+    for (const interval of validIntervals.slice(1)) {
+      if (interval.start <= currentEnd) {
+        currentEnd = Math.max(currentEnd, interval.end);
+      } else {
+        totalMs += currentEnd - currentStart;
+        currentStart = interval.start;
+        currentEnd = interval.end;
+      }
+    }
+    totalMs += currentEnd - currentStart;
+    return formatDuration(totalMs);
+  };
+
+  // ── TIME TRACKER: all values derived from real backend fields ──────────────
+
+  const gateTimeFormatted = formatTrackerDateTime(jobCard?.gateEntry?.entryTime || jobCard?.createdAt);
+  const trackerAssignments = assignments;
+  const trackerApprovals = (jobCard?.approvals || []).filter(
+    approval => String(approval.approvalType || '').toUpperCase() === 'ADDITIONAL_WORK'
+  );
+  const getAssignmentCategory = (assignment) => String(
+    assignment.jobCardService?.serviceItem?.category?.slug ||
+    assignment.jobCardService?.serviceItem?.category?.name ||
+    assignment.service?.category?.slug ||
+    assignment.service?.category?.name || ''
+  ).toLowerCase();
+  const isBodyShopCategory = (category) =>
+    category.includes('body') || category.includes('paint') || category.includes('denting');
+  const trackerMechAssignments = trackerAssignments.filter(
+    assignment => !isBodyShopCategory(getAssignmentCategory(assignment))
+  );
+  const trackerBodyshopAssignments = trackerAssignments.filter(
+    assignment => isBodyShopCategory(getAssignmentCategory(assignment))
+  );
+  const getApprovalInterval = (approval) => {
+    const status = String(approval.statusCode || approval.customerResponse || '').toUpperCase();
+    const endAt = approval.respondedAt || (status.includes('PENDING') ? null : undefined);
+    if (endAt === undefined) return null;
+    return getTimeInterval(approval.sentAt || approval.createdAt, endAt);
+  };
+  const getApprovalDepartments = (approval) => {
+    const categories = (approval.services || []).map(service =>
+      String(service.categorySlug || service.categoryName || '').toLowerCase()
+    );
+    return [...new Set(categories.map(category =>
+      isBodyShopCategory(category) ? 'body-shop' : 'mechanical'
+    ))];
+  };
+  const getDepartmentApprovalIntervals = (department) => trackerApprovals
+    .filter(approval => getApprovalDepartments(approval).includes(department))
+    .map(getApprovalInterval)
+    .filter(Boolean);
+  const getAssignmentIntervals = (assignmentList) => assignmentList
+    .map(assignment => getTimeInterval(assignment.assignedAt || assignment.startedAt, assignment.completedAt))
+    .filter(Boolean);
+  const getEarliestTimestamp = (values) => values
+    .filter(value => value && Number.isFinite(new Date(value).getTime()))
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0] || null;
+  const getLatestTimestamp = (values) => values
+    .filter(value => value && Number.isFinite(new Date(value).getTime()))
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null;
+
+  const mechAssignedAt = getEarliestTimestamp(trackerMechAssignments.map(a => a.assignedAt));
+  const mechStartedAt = getEarliestTimestamp(trackerMechAssignments.map(a => a.startedAt));
+  const mechStartFormatted = mechStartedAt ? formatTrackerDateTime(mechStartedAt) : 'Not started';
+  const mechCompAt = trackerMechAssignments.length > 0 && trackerMechAssignments.every(a => !!a.completedAt)
+    ? getLatestTimestamp(trackerMechAssignments.map(a => a.completedAt))
+    : null;
+  const timeInMechFormatted = getMergedDurationText([
+    ...getAssignmentIntervals(trackerMechAssignments),
+    ...getDepartmentApprovalIntervals('mechanical')
+  ]);
+
+  const bodyshopAssignedAt = getEarliestTimestamp(trackerBodyshopAssignments.map(a => a.assignedAt));
+  const bodyshopStartedAt = getEarliestTimestamp(trackerBodyshopAssignments.map(a => a.startedAt));
+  const bodyshopStartFormatted = bodyshopStartedAt ? formatTrackerDateTime(bodyshopStartedAt) : 'Not started';
+  const bodyshopCompAt = trackerBodyshopAssignments.length > 0 && trackerBodyshopAssignments.every(a => !!a.completedAt)
+    ? getLatestTimestamp(trackerBodyshopAssignments.map(a => a.completedAt))
+    : null;
+  const timeInBodyshopFormatted = getMergedDurationText([
+    ...getAssignmentIntervals(trackerBodyshopAssignments),
+    ...getDepartmentApprovalIntervals('body-shop')
+  ]);
+
+  const addlAssignments = trackerAssignments.filter(
+    assignment => assignment.jobCardService?.isAdditional || assignment.service?.isAdditional
+  );
+  const addlApprovals = trackerApprovals.map(approval => ({ approval, interval: getApprovalInterval(approval) }));
+  const addlStartAt = getEarliestTimestamp([
+    ...addlAssignments.map(a => a.assignedAt),
+    ...trackerApprovals.map(a => a.sentAt || a.createdAt)
+  ]);
+  const timeInAddlFormatted = getMergedDurationText([
+    ...getAssignmentIntervals(addlAssignments),
+    ...addlApprovals.map(item => item.interval)
+  ]);
+  const timeAwaitingCustomerFormatted = getMergedDurationText(
+    addlApprovals.map(item => item.interval)
+  );
+
+  // Promised delivery: directly from jobCard.expectedDeliveryAt
+  const deliveryTimeStr = jobCard?.expectedDeliveryAt || displayJobCard?.expectedDeliveryAt || jobCard?.expectedDeliveryDate;
+  const promisedDeliveryFormatted = formatDateTimeShort(deliveryTimeStr);
 
   const computeTimeRemainingPill = () => {
     if (isJobDelivered) {
@@ -1079,19 +1205,27 @@ export default function JobCardDetailPage() {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
                   <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time at gate</Typography>
-                  <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif' }}>{gateTimeFormatted}</Typography>
+                  <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{gateTimeFormatted}</Typography>
                 </Box>
 
                 {hasMechanicalWork && (
                   <>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Mech started</Typography>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif' }}>{mechStartFormatted}</Typography>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Mech assigned</Typography>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{mechAssignedAt ? formatTrackerDateTime(mechAssignedAt) : '—'}</Typography>
                     </Box>
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in mech</Typography>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInMechFormatted}</Typography>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Mech started</Typography>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{mechStartFormatted}</Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in mech (elapsed)</Typography>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInMechFormatted}</Typography>
+                        {mechCompAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>ended {formatTrackerDateTime(mechCompAt)}</Typography>}
+                      </Box>
                     </Box>
                   </>
                 )}
@@ -1099,27 +1233,52 @@ export default function JobCardDetailPage() {
                 {hasBodyshopWork && (
                   <>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Body Shop started</Typography>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif' }}>{bodyshopStartFormatted}</Typography>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Body Shop assigned</Typography>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{bodyshopAssignedAt ? formatTrackerDateTime(bodyshopAssignedAt) : '—'}</Typography>
                     </Box>
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in Body Shop</Typography>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInBodyshopFormatted}</Typography>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Body Shop started</Typography>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{bodyshopStartFormatted}</Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in Body Shop (elapsed)</Typography>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInBodyshopFormatted}</Typography>
+                        {bodyshopCompAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>ended {formatTrackerDateTime(bodyshopCompAt)}</Typography>}
+                      </Box>
                     </Box>
                   </>
                 )}
 
                 {addlAssignments.length > 0 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                    <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in Addl Work</Typography>
-                    <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInAddlFormatted}</Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                    <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Additional work elapsed</Typography>
+                    <Box sx={{ textAlign: 'right' }}>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInAddlFormatted}</Typography>
+                      {addlStartAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>from {formatTrackerDateTime(addlStartAt)}</Typography>}
+                    </Box>
+                  </Box>
+                )}
+
+                {addlApprovals.length > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                    <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Customer approval wait</Typography>
+                    <Box sx={{ textAlign: 'right' }}>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeAwaitingCustomerFormatted}</Typography>
+                      {addlApprovals.map(({ approval }, index) => (
+                        <Typography key={approval.id || index} variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>
+                          {formatTrackerDateTime(approval.sentAt || approval.createdAt)} to {approval.respondedAt ? formatTrackerDateTime(approval.respondedAt) : 'Awaiting response'}
+                        </Typography>
+                      ))}
+                    </Box>
                   </Box>
                 )}
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
                   <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Promised delivery</Typography>
-                  <Typography variant="body2" fontWeight={700} sx={{ color: '#2563eb', fontFamily: 'monospace, sans-serif' }}>{promisedDeliveryFormatted}</Typography>
+                  <Typography variant="body2" fontWeight={700} sx={{ color: '#2563eb', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{promisedDeliveryFormatted}</Typography>
                 </Box>
 
                 {/* Bottom Highlight Pill */}
