@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Box, Grid, Card, Typography, Divider, Chip, IconButton, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
+import { Box, Grid, Card, Typography, Divider, Chip, IconButton, FormControl, InputLabel, Select, MenuItem, TextField, Skeleton } from '@mui/material';
 import { ArrowLeft, ArrowRight, Car, User, Shield, FileText, AlertTriangle, PlusCircle, Clock, ChevronDown, ChevronUp, ClipboardList, Wrench, Play, Filter, PauseCircle, PlayCircle, Mic, Plus, Minus, MapPin, Maximize2, X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { useJobCard } from '../../queries/useDataQueries';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -445,7 +445,7 @@ export default function JobCardDetailPage() {
       const d = new Date(dateVal);
       if (isNaN(d.getTime())) return '—';
       const day = String(d.getDate()).padStart(2, '0');
-      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const mon = monthNames[d.getMonth()];
       const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
       return `${day} ${mon}, ${timeStr}`;
@@ -1804,6 +1804,13 @@ export default function JobCardDetailPage() {
               label="Mechanic"
               onChange={(e) => setSelectedMechanic(e.target.value)}
               sx={{ borderRadius: 2 }}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    maxHeight: 240,
+                  },
+                },
+              }}
             >
               {isMechanicsLoading && <MenuItem disabled value="">Loading mechanics...</MenuItem>}
               {!isMechanicsLoading && mechanics.length === 0 && <MenuItem disabled value="">No active mechanics found</MenuItem>}
@@ -1841,6 +1848,13 @@ export default function JobCardDetailPage() {
               label="Bay"
               onChange={(e) => setSelectedBay(e.target.value)}
               sx={{ borderRadius: 2 }}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    maxHeight: 240,
+                  },
+                },
+              }}
             >
               {isBaysLoading && <MenuItem disabled value="">Loading bays...</MenuItem>}
               {!isBaysLoading && bays.length === 0 && <MenuItem disabled value="">No active bays found</MenuItem>}

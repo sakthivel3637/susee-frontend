@@ -1221,6 +1221,13 @@ export default function JobCardCreate() {
                   onChange={(event) => setSelectedAssignUser(event.target.value)}
                   disabled={isMechanicsLoading || assignMutation.isPending}
                   sx={{ borderRadius: 2 }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 240,
+                      },
+                    },
+                  }}
                 >
                   {isMechanicsLoading && (
                     <MenuItem disabled value="">
@@ -1269,6 +1276,13 @@ export default function JobCardCreate() {
                   onChange={(event) => setSelectedAssignBay(event.target.value)}
                   disabled={isBaysLoading || assignMutation.isPending}
                   sx={{ borderRadius: 2 }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 240,
+                      },
+                    },
+                  }}
                 >
                   {isBaysLoading && (
                     <MenuItem disabled value="">
