@@ -299,8 +299,10 @@ export default function JobCardCreate() {
   };
 
   const isServiceCompleted = (service) => {
+    // CANCELLED is intentionally NOT locked — user can change it back after selecting it.
+    // Pipeline gating (isServiceCompletedOrPostponed) still treats CANCELLED as terminal.
     const code = getServiceStatusCode(service);
-    return ['COMPLETED', 'REJECTED', 'CANCELLED'].some((status) => code.includes(status));
+    return [''].some((status) => code.includes(status));
   };
 
   const isServiceCompletedOrPostponed = (service) => {

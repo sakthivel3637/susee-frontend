@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { Grid } from '@mui/material';
-import { Car, Clock, Wrench, CheckCircle2, LogOut, Maximize, ClipboardList, User } from 'lucide-react';
+import { Car, Clock, Wrench, CheckCircle2, LogOut, Maximize, ClipboardList, User, PackageCheck } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styles from './Kiosk.module.css';
 import { ROUTES } from '../../config/routes';
@@ -108,7 +108,12 @@ export default function KioskDisplay() {
   const [searchParams] = useSearchParams();
   const kioskKey = searchParams.get('kioskKey') || undefined;
   const { data: rawJobs, refetch, isError, error } = useTvKioskDashboard({ kioskKey });
-  const jobs = Array.isArray(rawJobs?.data || rawJobs) ? (rawJobs?.data || rawJobs || []) : [];
+  // API now returns { queue, deliveredToday } — fall back to legacy plain-array shape
+  const rawData = rawJobs?.data || rawJobs;
+  const jobs = Array.isArray(rawData?.queue)
+    ? rawData.queue
+    : Array.isArray(rawData) ? rawData : [];
+  const deliveredTodayRaw = Array.isArray(rawData?.deliveredToday) ? rawData.deliveredToday : [];
 
   useSocket({
     jobCardStatusChanged: (data) => {
@@ -136,6 +141,9 @@ export default function KioskDisplay() {
   }));
   const ready = jobs.filter(j => j.column === 'READY_FOR_DELIVERY').map(j => ({
     id: j.id, vehicle: j.vehicleNumber, model: j.vehicleInfo, time: formatReadyTime(j.updatedAt), customerName: j.customerName
+  }));
+  const delivered = deliveredTodayRaw.map(d => ({
+    id: d.id, vehicle: d.vehicleNumber, model: d.vehicleInfo, time: formatReadyTime(d.exitTime), customerName: d.customerName
   }));
 
   const animatedReady = useAutoScroll(ready, 4, 3500);
@@ -200,19 +208,11 @@ export default function KioskDisplay() {
         </div>
       </header>
 
-      {/* Main Grid */}
+      {/* Main Grid — shows only Ready for Delivery and Delivered Today */}
       <div className={styles.grid}>
         <Grid container spacing={{ xs: 1.5, md: 2, lg: 3 }} sx={{ height: { xs: 'auto', lg: '100%' } }}>
-          <Grid item xs={12} sm={6} lg={3} sx={{ height: { xs: 'auto', lg: '100%' }, minHeight: { xs: '450px', lg: 'auto' } }}>
-            <DisplaySection title="Mechanical" icon={Wrench} items={mechanical} statusClass={styles.mechSection} />
-          </Grid>
-          <Grid item xs={12} sm={6} lg={3} sx={{ height: { xs: 'auto', lg: '100%' }, minHeight: { xs: '450px', lg: 'auto' } }}>
-            <DisplaySection title="Body Shop" icon={Wrench} items={bodyShop} statusClass={styles.bodySection} />
-          </Grid>
-          <Grid item xs={12} sm={6} lg={3} sx={{ height: { xs: 'auto', lg: '100%' }, minHeight: { xs: '450px', lg: 'auto' } }}>
-            <DisplaySection title="Water Wash" icon={Wrench} items={waterWash} statusClass={styles.washSection} />
-          </Grid>
-          <Grid item xs={12} sm={6} lg={3} sx={{ height: { xs: 'auto', lg: '100%' }, minHeight: { xs: '450px', lg: 'auto' } }}>
+          {/* Ready to Delivery */}
+          <Grid item xs={12} sm={6} lg={6} sx={{ height: { xs: 'auto', lg: '100%' }, minHeight: { xs: '450px', lg: 'auto' } }}>
             <div className={`${styles.section} ${styles.readySection}`}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitle}><CheckCircle2 size={24} /> Ready to Delivery</div>
@@ -255,7 +255,17 @@ export default function KioskDisplay() {
               </div>
             </div>
           </Grid>
+          {/* Delivered Today — sourced from mobileGateEntry exitTime today */}
+          <Grid item xs={12} sm={6} lg={6} sx={{ height: { xs: 'auto', lg: '100%' }, minHeight: { xs: '450px', lg: 'auto' } }}>
+            <DisplaySection
+              title={`Delivered Today `}
+              icon={PackageCheck}
+              items={delivered}
+              statusClass={styles.deliveredSection}
+            />
+          </Grid>
         </Grid>
+
       </div>
     </div>
   );

@@ -469,6 +469,15 @@
   --light-accent: #a7f3d0;
 }
 
+.deliveredSection {
+  --section-color: #7c3aed; /* Violet */
+  --bg-gradient: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #f5f3ff 100%);
+  --border-color: #a78bfa;
+  --shadow-color: rgba(124, 58, 237, 0.2);
+  --dark-accent: #2e1065;
+  --light-accent: #ddd6fe;
+}
+
 .empty {
   text-align: center;
   padding: 3rem 1rem;
