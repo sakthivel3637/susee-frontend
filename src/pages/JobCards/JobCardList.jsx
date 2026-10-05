@@ -49,12 +49,14 @@ export default function JobCardList() {
 
   // Tab switch — sends status codes to backend; works correctly with server-side pagination
   const TAB_STATUS_CODES = {
+    all:       '',   // no filter → returns every job card across all statuses
     mechanic:  'MECHANICAL_ASSIGNED,MECHANICAL_IN_PROGRESS',
     bodyshop:  'BODY_SHOP_ASSIGNED,BODY_SHOP_IN_PROGRESS',
     delivery:  'READY_FOR_DELIVERY,READY_FOR_DELIVERED',
   };
-  // Mechanic & Body Shop tabs sort by most recently assigned; Delivery tab sorts by creation date
+  // Mechanic & Body Shop tabs sort by most recently assigned; Delivery tab sorts by creation date; All tab sorts by createdAt
   const TAB_SORT_BY = {
+    all:      'createdAt',
     mechanic: 'assignedAt',
     bodyshop: 'assignedAt',
     delivery: 'createdAt',
@@ -68,7 +70,8 @@ export default function JobCardList() {
     }
   }, [location.state?.activeTab]);
 
-  // When the status dropdown is used, it overrides the tab filter
+  // When the status dropdown is used, it overrides the tab filter.
+  // For 'all' tab, TAB_STATUS_CODES[activeTab] is '' so no status param is sent.
   const tabStatusParam = statusFilter ? statusFilter : TAB_STATUS_CODES[activeTab];
   const tabSortBy = TAB_SORT_BY[activeTab];
 
@@ -304,12 +307,16 @@ export default function JobCardList() {
         </Box>
       )
     },
-    activeTab !== 'delivery' && activeTab !== 'ready_for_delivery' ? {
+    {
       header: 'Actions',
       render: (row) => {
         const statusCode = String(row.currentStatus?.statusCode || row.currentStatus?.code || '').toUpperCase();
         const rowId = String(row.slug || row.id).toLowerCase();
-        const canEditRow = canUpdateJobCards && !['READY_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_DELIVERED', 'VEHICLE_DELIVERED'].includes(statusCode);
+        const canEditRow = canUpdateJobCards && (
+          activeTab === 'all'
+            ? true
+            : !['READY_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_DELIVERED', 'VEHICLE_DELIVERED', 'REJECTED'].includes(statusCode)
+        );
 
         if (!canEditRow) return null;
 
@@ -327,8 +334,12 @@ export default function JobCardList() {
           </IconButton>
         );
       }
-    } : null
-  ].filter(Boolean);
+    }
+  ].filter((col) => {
+    // Hide the Actions column entirely when on the Ready for Delivery tab
+    if (activeTab === 'delivery' && col?.header === 'Actions') return false;
+    return Boolean(col);
+  });
 
   const tableData = data?.data || [];
 
@@ -356,12 +367,24 @@ export default function JobCardList() {
               fontWeight: 700,
               fontSize: '0.88rem',
               textTransform: 'none',
-              minWidth: 160,
+              minWidth: 140,
               py: 1.4,
             },
             '& .MuiTabs-indicator': { height: 3, borderRadius: '3px 3px 0 0' },
           }}
         >
+          <Tab
+            value="all"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                All
+                {activeTab === 'all' && (
+                  <Chip label={data?.meta?.total ?? 0} size="small"
+                    sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#475569', color: '#fff' }} />
+                )}
+              </Box>
+            }
+          />
           <Tab
             value="mechanic"
             label={

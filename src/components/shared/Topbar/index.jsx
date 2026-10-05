@@ -48,6 +48,7 @@ import {
 } from "../../../config/firebase";
 import { toastInfo } from "../../../notifications/toast";
 import { usePermissions } from "../../../hooks/usePermissions";
+import { socket, connectSocket } from "../../../socket/socket";
 const getNotificationIcon = (type) => {
   const t = String(type || "").toUpperCase();
   if (t.includes("JOB") || t.includes("ASSIGN") || t.includes("WORK")) {
@@ -148,10 +149,27 @@ export default function Topbar() {
     fetchUserDetails();
   }, [setUser, setMenus]);
 
+  // Refresh notification badge when socket events arrive
+  useEffect(() => {
+    const handleRefresh = () => {
+      if (canReadNotifications) {
+        fetchNotifications();
+      }
+    };
+
+    socket.on("notification-created", handleRefresh);
+
+    return () => {
+      socket.off("notification-created", handleRefresh);
+    };
+  }, [canReadNotifications]);
+
+  // Notification polling + Firebase — only for users who can read notifications
   useEffect(() => {
     if (user && canReadNotifications) {
       fetchNotifications();
       requestNotificationPermissionAndRegister();
+
       const unsubscribe = setupForegroundMessageListener((payload) => {
         console.log(
           "React Application received foreground push payload:",
