@@ -25,3 +25,13 @@ export const updateServiceItemStatusApi = async (id, data) => {
   const response = await axiosInstance.patch(ENDPOINTS.ADMIN_MASTERS.SERVICE_ITEMS.STATUS(id), data);
   return response;
 };
+
+export const importServiceItemsApi = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await axiosInstance.post(ENDPOINTS.ADMIN_MASTERS.SERVICE_ITEMS.IMPORT, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return response;
+};
+

@@ -177,9 +177,9 @@ export default function Topbar() {
         );
         fetchNotifications();
         if (payload?.notification) {
-          toastInfo(
-            `${payload.notification.title}: ${payload.notification.body}`,
-          );
+          // toastInfo(
+          //   `${payload.notification.title}: ${payload.notification.body}`,
+          // );
           if (Notification.permission === "granted") {
             try {
               new Notification(payload.notification.title, {
@@ -214,9 +214,9 @@ export default function Topbar() {
         fetchNotifications();
         const payload = event.data.payload;
         if (payload?.notification) {
-          toastInfo(
-            `${payload.notification.title}: ${payload.notification.body}`,
-          );
+          // toastInfo(
+          //   `${payload.notification.title}: ${payload.notification.body}`,
+          // );
         }
       }
     };

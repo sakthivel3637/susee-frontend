@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Box, Grid, Card, Typography, Divider, Chip, IconButton, FormControl, InputLabel, Select, MenuItem, TextField, Skeleton } from '@mui/material';
-import { ArrowLeft, ArrowRight, Car, User, Shield, FileText, AlertTriangle, PlusCircle, Clock, ChevronDown, ChevronUp, ClipboardList, Wrench, Play, Filter, PauseCircle, PlayCircle, Mic, Plus, Minus, MapPin, Maximize2, X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Car, User, Shield, FileText, AlertTriangle, PlusCircle, Clock, ChevronDown, ChevronUp, Wrench, Play, Filter, PauseCircle, PlayCircle, Mic, Plus, Minus, MapPin, Maximize2, X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { useJobCard } from '../../queries/useDataQueries';
 import StatusBadge from '../../components/common/StatusBadge';
 import Loader from '../../components/common/Loader';
@@ -29,6 +29,10 @@ export default function JobCardDetailPage() {
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [isPhotoLightboxOpen, setIsPhotoLightboxOpen] = useState(false);
   const [trackerNow, setTrackerNow] = useState(() => Date.now());
+  const [isJobProgressOpen, setIsJobProgressOpen] = useState(true);
+  const [isTimeTrackerOpen, setIsTimeTrackerOpen] = useState(true);
+  const [isAssignedWorkOpen, setIsAssignedWorkOpen] = useState(true);
+  const [isInspectionPhotosOpen, setIsInspectionPhotosOpen] = useState(true);
 
   useEffect(() => {
     const timerId = window.setInterval(() => setTrackerNow(Date.now()), 60000);
@@ -873,13 +877,6 @@ export default function JobCardDetailPage() {
                   </Box>
                   <Box sx={{ overflowX: 'auto' }}>
                     <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-                      <Box component="thead">
-                        <Box component="tr" sx={{ bgcolor: 'rgba(18, 52, 59, 0.02)', borderBottom: '1px solid #e2e8f0' }}>
-                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary' }}>Service Description</Box>
-                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'center', color: 'text.secondary', width: 130 }}>Status</Box>
-                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'right', color: 'text.secondary', width: 150 }}>Rate</Box>
-                        </Box>
-                      </Box>
                       <Box component="tbody">
                         {additionalServices.map((service, index) => (
                           <Box component="tr" key={index} sx={{ borderBottom: index < additionalServices.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
@@ -958,14 +955,14 @@ export default function JobCardDetailPage() {
                 </Box>
               </Card>)}
             {/* Additional Work Messages & Voice Notes */}
-            {Array.isArray(jobCard?.approvals) && jobCard.approvals.some((a) => a.mechanicExplanation || a.voiceNoteUrl || (a.services && a.services.length > 0)) && (
+            {Array.isArray(jobCard?.approvals) && jobCard.approvals.some((a) => a.approvalType === 'ADDITIONAL_WORK' && (a.mechanicExplanation || a.voiceNoteUrl || (a.services && a.services.length > 0))) && (
               <Card sx={{ borderRadius: 3 }}>
                 <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Mic size={18} color="#0d9488" />
                   <Typography variant="subtitle1" fontWeight={700}>Additional Work Messages & Voice Notes</Typography>
                 </Box>
                 <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                  {jobCard.approvals.filter((a) => a.mechanicExplanation || a.voiceNoteUrl || (a.services && a.services.length > 0)).map((approval, idx) => {
+                  {jobCard.approvals.filter((a) => a.approvalType === 'ADDITIONAL_WORK' && (a.mechanicExplanation || a.voiceNoteUrl || (a.services && a.services.length > 0))).map((approval, idx) => {
                     const approvalStatus = approval.statusCode || approval.customerResponse || approval.status || 'PENDING';
                     const approvalServices = (approval.services && approval.services.length > 0)
                       ? approval.services
@@ -1097,224 +1094,280 @@ export default function JobCardDetailPage() {
 
             {/* JOB PROGRESS Timeline Card */}
             <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', p: 3, bgcolor: '#ffffff' }}>
-              <Box sx={{ pb: 2, mb: 2.5, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <MapPin size={16} color="#ef4444" />
-                <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  JOB PROGRESS
-                </Typography>
+              <Box
+                onClick={() => setIsJobProgressOpen(prev => !prev)}
+                sx={{
+                  pb: isJobProgressOpen ? 2 : 0,
+                  mb: isJobProgressOpen ? 2.5 : 0,
+                  borderBottom: isJobProgressOpen ? '1px solid #f1f5f9' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <MapPin size={16} color="#ef4444" />
+                  <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    JOB PROGRESS
+                  </Typography>
+                </Box>
+                <Box sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  bgcolor: isJobProgressOpen ? '#0d9488' : '#e2e8f0',
+                  color: isJobProgressOpen ? '#ffffff' : '#475569',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease-in-out'
+                }}>
+                  {isJobProgressOpen ? <Minus size={16} /> : <Plus size={16} />}
+                </Box>
               </Box>
 
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
-                {timelineSteps.map((step, index) => {
-                  const isLast = index === timelineSteps.length - 1;
+              {isJobProgressOpen && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
+                  {timelineSteps.map((step, index) => {
+                    const isLast = index === timelineSteps.length - 1;
 
-                  return (
-                    <Box key={step.id || index} sx={{ display: 'flex', gap: 2, position: 'relative', pb: isLast ? 0 : 2.5 }}>
-                      {/* Connecting Vertical Line */}
-                      {!isLast && (
+                    return (
+                      <Box key={step.id || index} sx={{ display: 'flex', gap: 2, position: 'relative', pb: isLast ? 0 : 2.5 }}>
+                        {/* Connecting Vertical Line */}
+                        {!isLast && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              left: 10,
+                              top: 22,
+                              bottom: 0,
+                              width: 2,
+                              bgcolor: step.state === 'completed' ? '#a7f3d0' : '#e2e8f0',
+                              zIndex: 0
+                            }}
+                          />
+                        )}
+
+                        {/* Icon Circle */}
                         <Box
                           sx={{
-                            position: 'absolute',
-                            left: 10,
-                            top: 22,
-                            bottom: 0,
-                            width: 2,
-                            bgcolor: step.state === 'completed' ? '#a7f3d0' : '#e2e8f0',
-                            zIndex: 0
-                          }}
-                        />
-                      )}
-
-                      {/* Icon Circle */}
-                      <Box
-                        sx={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          zIndex: 1,
-                          bgcolor: '#ffffff',
-                          border: step.state === 'completed'
-                            ? '2px solid #10b981'
-                            : step.state === 'active'
-                              ? '2px solid #2563eb'
-                              : '2px solid #cbd5e1',
-                          boxShadow: step.state === 'active' ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none',
-                          flexShrink: 0,
-                          mt: 0.25
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: step.state === 'active' ? 10 : 8,
-                            height: step.state === 'active' ? 10 : 8,
+                            width: 22,
+                            height: 22,
                             borderRadius: '50%',
-                            bgcolor: step.state === 'completed'
-                              ? '#10b981'
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1,
+                            bgcolor: '#ffffff',
+                            border: step.state === 'completed'
+                              ? '2px solid #10b981'
                               : step.state === 'active'
-                                ? '#2563eb'
-                                : '#cbd5e1'
+                                ? '2px solid #2563eb'
+                                : '2px solid #cbd5e1',
+                            boxShadow: step.state === 'active' ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none',
+                            flexShrink: 0,
+                            mt: 0.25
                           }}
-                        />
-                      </Box>
+                        >
+                          <Box
+                            sx={{
+                              width: step.state === 'active' ? 10 : 8,
+                              height: step.state === 'active' ? 10 : 8,
+                              borderRadius: '50%',
+                              bgcolor: step.state === 'completed'
+                                ? '#10b981'
+                                : step.state === 'active'
+                                  ? '#2563eb'
+                                  : '#cbd5e1'
+                            }}
+                          />
+                        </Box>
 
-                      {/* Content */}
-                      <Box sx={{ flex: 1 }}>
-                        <Typography
-                          variant="body2"
-                          fontWeight={700}
-                          sx={{
-                            color: step.state === 'completed' || step.state === 'active' ? '#0f172a' : '#64748b',
-                            lineHeight: 1.2
-                          }}
-                        >
-                          {step.title}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: '#64748b',
-                            display: 'block',
-                            mt: 0.3,
-                            fontWeight: 500,
-                            fontSize: '0.78rem'
-                          }}
-                        >
-                          {step.subtitle}
-                        </Typography>
+                        {/* Content */}
+                        <Box sx={{ flex: 1 }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            sx={{
+                              color: step.state === 'completed' || step.state === 'active' ? '#0f172a' : '#64748b',
+                              lineHeight: 1.2
+                            }}
+                          >
+                            {step.title}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: '#64748b',
+                              display: 'block',
+                              mt: 0.3,
+                              fontWeight: 500,
+                              fontSize: '0.78rem'
+                            }}
+                          >
+                            {step.subtitle}
+                          </Typography>
+                        </Box>
                       </Box>
-                    </Box>
-                  );
-                })}
-              </Box>
+                    );
+                  })}
+                </Box>
+              )}
             </Card>
 
             {/* TIME TRACKER Card */}
             <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', p: 3, bgcolor: '#ffffff' }}>
-              <Box sx={{ pb: 2, mb: 2.5, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Clock size={16} color="#64748b" />
-                <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  TIME TRACKER
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                  <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time at gate</Typography>
-                  <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{gateTimeFormatted}</Typography>
-                </Box>
-
-                {hasMechanicalWork && (
-                  <>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Mech assigned</Typography>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{mechAssignedAt ? formatTrackerDateTime(mechAssignedAt) : '—'}</Typography>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Mech started</Typography>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{mechStartFormatted}</Typography>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in mech (elapsed)</Typography>
-                      <Box sx={{ textAlign: 'right' }}>
-                        <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInMechFormatted}</Typography>
-                        {mechCompAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>ended {formatTrackerDateTime(mechCompAt)}</Typography>}
-                      </Box>
-                    </Box>
-                  </>
-                )}
-
-                {hasBodyshopWork && (
-                  <>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Body Shop assigned</Typography>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{bodyshopAssignedAt ? formatTrackerDateTime(bodyshopAssignedAt) : '—'}</Typography>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Body Shop started</Typography>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{bodyshopStartFormatted}</Typography>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in Body Shop (elapsed)</Typography>
-                      <Box sx={{ textAlign: 'right' }}>
-                        <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInBodyshopFormatted}</Typography>
-                        {bodyshopCompAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>ended {formatTrackerDateTime(bodyshopCompAt)}</Typography>}
-                      </Box>
-                    </Box>
-                  </>
-                )}
-
-                {addlAssignments.length > 0 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                    <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Additional work elapsed</Typography>
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInAddlFormatted}</Typography>
-                      {addlStartAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>from {formatTrackerDateTime(addlStartAt)}</Typography>}
-                    </Box>
-                  </Box>
-                )}
-
-                {addlApprovals.length > 0 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
-                    <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Customer approval wait</Typography>
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeAwaitingCustomerFormatted}</Typography>
-                      {addlApprovals.map(({ approval }, index) => (
-                        <Typography key={approval.id || index} variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>
-                          {formatTrackerDateTime(approval.sentAt || approval.createdAt)} to {approval.respondedAt ? formatTrackerDateTime(approval.respondedAt) : 'Awaiting response'}
-                        </Typography>
-                      ))}
-                    </Box>
-                  </Box>
-                )}
-
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-                  <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Promised delivery</Typography>
-                  <Typography variant="body2" fontWeight={700} sx={{ color: '#2563eb', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{promisedDeliveryFormatted}</Typography>
-                </Box>
-
-                {/* Bottom Highlight Pill */}
-                <Box
-                  sx={{
-                    p: 1.5,
-                    bgcolor: remainingPill.bg,
-                    borderRadius: 2,
-                    border: `1px solid ${remainingPill.border}`,
-                    textAlign: 'center',
-                    mt: 0.5
-                  }}
-                >
-                  <Typography variant="body2" fontWeight={600} sx={{ color: remainingPill.color, fontSize: '0.85rem' }}>
-                    {remainingPill.text}
+              <Box
+                onClick={() => setIsTimeTrackerOpen(prev => !prev)}
+                sx={{
+                  pb: isTimeTrackerOpen ? 2 : 0,
+                  mb: isTimeTrackerOpen ? 2.5 : 0,
+                  borderBottom: isTimeTrackerOpen ? '1px solid #f1f5f9' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Clock size={16} color="#64748b" />
+                  <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    TIME TRACKER
                   </Typography>
                 </Box>
+                <Box sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  bgcolor: isTimeTrackerOpen ? '#0d9488' : '#e2e8f0',
+                  color: isTimeTrackerOpen ? '#ffffff' : '#475569',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease-in-out'
+                }}>
+                  {isTimeTrackerOpen ? <Minus size={16} /> : <Plus size={16} />}
+                </Box>
               </Box>
-            </Card>
 
-            {/* Supervisor Notes Card */}
-            <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', p: 3, bgcolor: '#ffffff' }}>
-              <Box sx={{ pb: 1.5, mb: 2, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <ClipboardList size={16} color="#2563eb" />
-                <Typography variant="caption" fontWeight={800} sx={{ color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  SUPERVISOR NOTES
-                </Typography>
-              </Box>
+              {isTimeTrackerOpen && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                    <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time at gate</Typography>
+                    <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{gateTimeFormatted}</Typography>
+                  </Box>
 
-              <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
-                <Typography variant="body2" sx={{ color: supervisorNotesText ? '#1e293b' : '#94a3b8', fontStyle: supervisorNotesText ? 'normal' : 'italic', whiteSpace: 'pre-wrap', fontWeight: 500 }}>
-                  {supervisorNotesText || 'No supervisor notes added for this job card.'}
-                </Typography>
-              </Box>
+                  {hasMechanicalWork && (
+                    <>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Mech assigned</Typography>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{mechAssignedAt ? formatTrackerDateTime(mechAssignedAt) : '—'}</Typography>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Mech started</Typography>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{mechStartFormatted}</Typography>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in mech (elapsed)</Typography>
+                        <Box sx={{ textAlign: 'right' }}>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInMechFormatted}</Typography>
+                          {mechCompAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>ended {formatTrackerDateTime(mechCompAt)}</Typography>}
+                        </Box>
+                      </Box>
+                    </>
+                  )}
+
+                  {hasBodyshopWork && (
+                    <>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Body Shop assigned</Typography>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{bodyshopAssignedAt ? formatTrackerDateTime(bodyshopAssignedAt) : '—'}</Typography>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Body Shop started</Typography>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{bodyshopStartFormatted}</Typography>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in Body Shop (elapsed)</Typography>
+                        <Box sx={{ textAlign: 'right' }}>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInBodyshopFormatted}</Typography>
+                          {bodyshopCompAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>ended {formatTrackerDateTime(bodyshopCompAt)}</Typography>}
+                        </Box>
+                      </Box>
+                    </>
+                  )}
+
+                  {addlAssignments.length > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Additional work elapsed</Typography>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInAddlFormatted}</Typography>
+                        {addlStartAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>from {formatTrackerDateTime(addlStartAt)}</Typography>}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {addlApprovals.length > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Customer approval wait</Typography>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeAwaitingCustomerFormatted}</Typography>
+                        {addlApprovals.map(({ approval }, index) => (
+                          <Typography key={approval.id || index} variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>
+                            {formatTrackerDateTime(approval.sentAt || approval.createdAt)} to {approval.respondedAt ? formatTrackerDateTime(approval.respondedAt) : 'Awaiting response'}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+                    <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Promised delivery</Typography>
+                    <Typography variant="body2" fontWeight={700} sx={{ color: '#2563eb', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{promisedDeliveryFormatted}</Typography>
+                  </Box>
+
+                  {/* Bottom Highlight Pill */}
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      bgcolor: remainingPill.bg,
+                      borderRadius: 2,
+                      border: `1px solid ${remainingPill.border}`,
+                      textAlign: 'center',
+                      mt: 0.5
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={600} sx={{ color: remainingPill.color, fontSize: '0.85rem' }}>
+                      {remainingPill.text}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
             </Card>
 
             <Card sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-              <Box sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box
+                onClick={() => setIsAssignedWorkOpen(prev => !prev)}
+                sx={{
+                  p: 2.5,
+                  borderBottom: isAssignedWorkOpen ? '1px solid' : 'none',
+                  borderColor: 'divider',
+                  display: 'flex',
+                  justify: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
                 <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#0f172a' }}>Assigned Mechanical Work</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Chip
@@ -1328,159 +1381,174 @@ export default function JobCardDetailPage() {
                       px: 0.5
                     }}
                   />
+                  <Box sx={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    bgcolor: isAssignedWorkOpen ? '#0d9488' : '#e2e8f0',
+                    color: isAssignedWorkOpen ? '#ffffff' : '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'all 0.2s ease-in-out'
+                  }}>
+                    {isAssignedWorkOpen ? <Minus size={16} /> : <Plus size={16} />}
+                  </Box>
                 </Box>
               </Box>
-              <Box sx={{ p: 2.5 }}>
-                {assignmentDetails.length === 0 ? (
-                  <Box sx={{ border: '1px dashed', borderColor: 'divider', borderRadius: 2, p: 3, textAlign: 'center' }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No mechanical assignment added for this job card yet.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                    {assignmentDetails.map((assignment, index) => {
-                      const assignedUser = assignment.assignedUser || {};
-                      const serviceName = assignment.jobCardService?.serviceName || assignment.service?.serviceName || 'Assigned Service';
-                      const assignmentId = assignment.id || `assignment-${index}`;
-                      const defaultExpandedId = assignmentDetails[0]?.id || `assignment-0`;
-                      const activeId = expandedAssignmentId !== null ? expandedAssignmentId : defaultExpandedId;
-                      const isExpanded = activeId === assignmentId;
+              {isAssignedWorkOpen && (
+                <Box sx={{ p: 2.5 }}>
+                  {assignmentDetails.length === 0 ? (
+                    <Box sx={{ border: '1px dashed', borderColor: 'divider', borderRadius: 2, p: 3, textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No mechanical assignment added for this job card yet.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                      {assignmentDetails.map((assignment, index) => {
+                        const assignedUser = assignment.assignedUser || {};
+                        const serviceName = assignment.jobCardService?.serviceName || assignment.service?.serviceName || 'Assigned Service';
+                        const assignmentId = assignment.id || `assignment-${index}`;
+                        const defaultExpandedId = assignmentDetails[0]?.id || `assignment-0`;
+                        const activeId = expandedAssignmentId !== null ? expandedAssignmentId : defaultExpandedId;
+                        const isExpanded = activeId === assignmentId;
 
-                      const toggleExpanded = () => {
-                        setExpandedAssignmentId(isExpanded ? '' : assignmentId);
-                      };
+                        const toggleExpanded = () => {
+                          setExpandedAssignmentId(isExpanded ? '' : assignmentId);
+                        };
 
-                      const statusLabel = getAssignmentStatusLabel(assignment);
-                      const statusValue = getAssignmentStatusValue(assignment);
+                        const statusLabel = getAssignmentStatusLabel(assignment);
+                        const statusValue = getAssignmentStatusValue(assignment);
 
-                      return (
-                        <Box
-                          key={assignmentId}
-                          sx={{
-                            border: '1px solid',
-                            borderColor: '#e2e8f0',
-                            borderRadius: '12px',
-                            p: 2.5,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 2,
-                            boxShadow: isExpanded ? '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.025)' : 'none',
-                            bgcolor: '#ffffff',
-                            transition: 'all 0.2s ease-in-out'
-                          }}
-                        >
-                          {/* Top Header Row */}
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                              {/* Avatar Icon */}
-                              <Box sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: '50%',
-                                bgcolor: '#eff6ff',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#2563eb'
-                              }}>
-                                <User size={20} />
+                        return (
+                          <Box
+                            key={assignmentId}
+                            sx={{
+                              border: '1px solid',
+                              borderColor: '#e2e8f0',
+                              borderRadius: '12px',
+                              p: 2.5,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 2,
+                              boxShadow: isExpanded ? '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.025)' : 'none',
+                              bgcolor: '#ffffff',
+                              transition: 'all 0.2s ease-in-out'
+                            }}
+                          >
+                            {/* Top Header Row */}
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                {/* Avatar Icon */}
+                                <Box sx={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: '50%',
+                                  bgcolor: '#eff6ff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#2563eb'
+                                }}>
+                                  <User size={20} />
+                                </Box>
+                                {/* Name & Task */}
+                                <Box>
+                                  <Typography variant="body2" fontWeight={700} sx={{ color: '#1e293b', fontSize: '0.95rem' }}>
+                                    {serviceName}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.25 }}>
+                                    {assignedUser.fullName || 'Unassigned'} {assignedUser.employeeCode ? ` - ${assignedUser.employeeCode}` : ''}
+                                  </Typography>
+                                </Box>
                               </Box>
-                              {/* Name & Task */}
-                              <Box>
-                                <Typography variant="body2" fontWeight={700} sx={{ color: '#1e293b', fontSize: '0.95rem' }}>
-                                  {serviceName}
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.25 }}>
-                                  {assignedUser.fullName || 'Unassigned'} {assignedUser.employeeCode ? ` - ${assignedUser.employeeCode}` : ''}
-                                </Typography>
+
+                              {/* Status Dot & Chevron */}
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                {/* Dot Badge */}
+                                <Box sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 0.75,
+                                  bgcolor: statusValue === 'ON_HOLD' ? '#fee2e2' : statusValue === 'COMPLETED' ? '#dcfce7' : statusValue === 'IN_PROGRESS' ? '#eff6ff' : '#ffedd5',
+                                  color: statusValue === 'ON_HOLD' ? '#991b1b' : statusValue === 'COMPLETED' ? '#166534' : statusValue === 'IN_PROGRESS' ? '#1e40af' : '#c2410c',
+                                  px: 1.5,
+                                  py: 0.5,
+                                  borderRadius: '12px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700
+                                }}>
+                                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: statusValue === 'ON_HOLD' ? '#b91c1c' : statusValue === 'COMPLETED' ? '#15803d' : statusValue === 'IN_PROGRESS' ? '#1d4ed8' : '#ea580c' }} />
+                                  {statusLabel}
+                                </Box>
+
+                                {/* Collapse/Expand toggle */}
+                                <IconButton
+                                  size="small"
+                                  onClick={toggleExpanded}
+                                  sx={{
+                                    border: '1px solid',
+                                    borderColor: '#e2e8f0',
+                                    borderRadius: '8px',
+                                    p: 0.5,
+                                    color: '#64748b'
+                                  }}
+                                >
+                                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                </IconButton>
                               </Box>
                             </Box>
 
-                            {/* Status Dot & Chevron */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                              {/* Dot Badge */}
-                              <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.75,
-                                bgcolor: statusValue === 'ON_HOLD' ? '#fee2e2' : statusValue === 'COMPLETED' ? '#dcfce7' : statusValue === 'IN_PROGRESS' ? '#eff6ff' : '#ffedd5',
-                                color: statusValue === 'ON_HOLD' ? '#991b1b' : statusValue === 'COMPLETED' ? '#166534' : statusValue === 'IN_PROGRESS' ? '#1e40af' : '#c2410c',
-                                px: 1.5,
-                                py: 0.5,
-                                borderRadius: '12px',
-                                fontSize: '0.75rem',
-                                fontWeight: 700
-                              }}>
-                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: statusValue === 'ON_HOLD' ? '#b91c1c' : statusValue === 'COMPLETED' ? '#15803d' : statusValue === 'IN_PROGRESS' ? '#1d4ed8' : '#ea580c' }} />
-                                {statusLabel}
-                              </Box>
-
-                              {/* Collapse/Expand toggle */}
-                              <IconButton
-                                size="small"
-                                onClick={toggleExpanded}
-                                sx={{
+                            {/* Collapsible Content */}
+                            {isExpanded && (
+                              <>
+                                {/* Start Time & End Time Box */}
+                                <Box sx={{
+                                  display: 'grid',
+                                  gridTemplateColumns: '1fr 1fr',
                                   border: '1px solid',
-                                  borderColor: '#e2e8f0',
-                                  borderRadius: '8px',
-                                  p: 0.5,
-                                  color: '#64748b'
-                                }}
-                              >
-                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                              </IconButton>
-                            </Box>
-                          </Box>
-
-                          {/* Collapsible Content */}
-                          {isExpanded && (
-                            <>
-                              {/* Start Time & End Time Box */}
-                              <Box sx={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr',
-                                border: '1px solid',
-                                borderColor: '#f1f5f9',
-                                bgcolor: '#f8fafc',
-                                borderRadius: '12px',
-                                overflow: 'hidden'
-                              }}>
-                                {/* Start Time */}
-                                <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, borderRight: '1px solid', borderColor: '#f1f5f9' }}>
-                                  <Box sx={{ color: '#3b82f6', display: 'flex', alignItems: 'center' }}>
-                                    <Clock size={20} />
+                                  borderColor: '#f1f5f9',
+                                  bgcolor: '#f8fafc',
+                                  borderRadius: '12px',
+                                  overflow: 'hidden'
+                                }}>
+                                  {/* Start Time */}
+                                  <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, borderRight: '1px solid', borderColor: '#f1f5f9' }}>
+                                    <Box sx={{ color: '#3b82f6', display: 'flex', alignItems: 'center' }}>
+                                      <Clock size={20} />
+                                    </Box>
+                                    <Box>
+                                      <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem', fontWeight: 500, textTransform: 'uppercase' }}>
+                                        Start Time
+                                      </Typography>
+                                      <Typography variant="body2" fontWeight={700} sx={{ color: '#1e293b', mt: 0.25 }}>
+                                        {assignment.startedAt ? formatDateTime(assignment.startedAt) : 'Not Started'}
+                                      </Typography>
+                                    </Box>
                                   </Box>
-                                  <Box>
-                                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem', fontWeight: 500, textTransform: 'uppercase' }}>
-                                      Start Time
-                                    </Typography>
-                                    <Typography variant="body2" fontWeight={700} sx={{ color: '#1e293b', mt: 0.25 }}>
-                                      {assignment.startedAt ? formatDateTime(assignment.startedAt) : 'Not Started'}
-                                    </Typography>
+
+                                  {/* End Time */}
+                                  <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Box sx={{ color: '#8b5cf6', display: 'flex', alignItems: 'center' }}>
+                                      <Clock size={20} />
+                                    </Box>
+                                    <Box>
+                                      <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem', fontWeight: 500, textTransform: 'uppercase' }}>
+                                        End Time
+                                      </Typography>
+                                      <Typography variant="body2" fontWeight={700} sx={{ color: '#1e293b', mt: 0.25 }}>
+                                        {assignment.completedAt ? formatDateTime(assignment.completedAt) : 'Not Started'}
+                                      </Typography>
+                                    </Box>
                                   </Box>
                                 </Box>
 
-                                {/* End Time */}
-                                <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                  <Box sx={{ color: '#8b5cf6', display: 'flex', alignItems: 'center' }}>
-                                    <Clock size={20} />
-                                  </Box>
-                                  <Box>
-                                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem', fontWeight: 500, textTransform: 'uppercase' }}>
-                                      End Time
-                                    </Typography>
-                                    <Typography variant="body2" fontWeight={700} sx={{ color: '#1e293b', mt: 0.25 }}>
-                                      {assignment.completedAt ? formatDateTime(assignment.completedAt) : 'Not Started'}
-                                    </Typography>
-                                  </Box>
-                                </Box>
-                              </Box>
+                                <Divider sx={{ borderColor: '#f1f5f9' }} />
 
-                              <Divider sx={{ borderColor: '#f1f5f9' }} />
-
-                              {/* Footer Action and Details */}
-                              {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                                {/* Footer Action and Details */}
+                                {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
                                 <Box sx={{ display: 'flex', gap: 4 }}>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <ClipboardList size={18} color="#6366f1" />
@@ -1537,26 +1605,55 @@ export default function JobCardDetailPage() {
                                   ) : null}
                                 </Box>
                               </Box> */}
-                            </>
-                          )}
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                )}
-              </Box>
+                              </>
+                            )}
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  )}
+                </Box>
+              )}
             </Card>
 
             {/* Vehicle Photos Gallery Card */}
             <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', p: 3, bgcolor: '#ffffff' }}>
-              <Box sx={{ pb: 1.5, mb: 2.5, borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ImageIcon size={18} color="#2563eb" />
-                  <Typography variant="subtitle1" fontWeight={700}>Vehicle Inspection & Photos</Typography>
+              <Box
+                onClick={() => setIsInspectionPhotosOpen(prev => !prev)}
+                sx={{
+                  pb: isInspectionPhotosOpen ? 1.5 : 0,
+                  mb: isInspectionPhotosOpen ? 2.5 : 0,
+                  borderBottom: isInspectionPhotosOpen ? '1px solid #f1f5f9' : 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1,
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ImageIcon size={18} color="#2563eb" />
+                    <Typography variant="subtitle1" fontWeight={700}>Vehicle Inspection & Photos</Typography>
+                  </Box>
+                  <Box sx={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    bgcolor: isInspectionPhotosOpen ? '#0d9488' : '#e2e8f0',
+                    color: isInspectionPhotosOpen ? '#ffffff' : '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'all 0.2s ease-in-out'
+                  }}>
+                    {isInspectionPhotosOpen ? <Minus size={16} /> : <Plus size={16} />}
+                  </Box>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Chip label={`${vehiclePhotos.length} Photo${vehiclePhotos.length === 1 ? '' : 's'}`} size="small" sx={{ fontWeight: 700, bgcolor: vehiclePhotos.length > 0 ? '#eff6ff' : '#f1f5f9', color: vehiclePhotos.length > 0 ? '#2563eb' : '#64748b', fontSize: '0.75rem' }} />
-                  {vehiclePhotos.length > 0 && (
+                  {vehiclePhotos.length > 0 && isInspectionPhotosOpen && (
                     <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748b' }}>
                       Click photo for full screen
                     </Typography>
@@ -1564,91 +1661,93 @@ export default function JobCardDetailPage() {
                 </Box>
               </Box>
 
-              {vehiclePhotos.length === 0 ? (
-                <Box sx={{ border: '1px dashed #cbd5e1', borderRadius: 2, p: 3, textAlign: 'center', bgcolor: '#f8fafc' }}>
-                  <ImageIcon size={32} color="#94a3b8" style={{ marginBottom: 8 }} />
-                  <Typography variant="body2" fontWeight={600} sx={{ color: '#475569' }}>
-                    No Vehicle Photos Uploaded
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                    Inspection photos uploaded during CRM job card creation will appear here.
-                  </Typography>
-                </Box>
-              ) : (
-                <>
-                  {/* Main Photo Preview Box */}
-                  <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', bgcolor: '#0f172a', height: { xs: 200, sm: 240 }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Box
-                      component="img"
-                      src={vehiclePhotos[activePhotoIdx]?.url}
-                      alt={vehiclePhotos[activePhotoIdx]?.category || 'Vehicle Photo'}
-                      onClick={() => setIsPhotoLightboxOpen(true)}
-                      sx={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
-                    />
-
-                    {/* Left Carousel Arrow */}
-                    {vehiclePhotos.length > 1 && (
-                      <IconButton
-                        onClick={(e) => { e.stopPropagation(); setActivePhotoIdx((prev) => (prev - 1 + vehiclePhotos.length) % vehiclePhotos.length); }}
-                        sx={{ position: 'absolute', left: 8, bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#ffffff' }, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
-                        size="small"
-                      >
-                        <ChevronLeft size={18} color="#0f172a" />
-                      </IconButton>
-                    )}
-
-                    {/* Right Carousel Arrow */}
-                    {vehiclePhotos.length > 1 && (
-                      <IconButton
-                        onClick={(e) => { e.stopPropagation(); setActivePhotoIdx((prev) => (prev + 1) % vehiclePhotos.length); }}
-                        sx={{ position: 'absolute', right: 8, bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#ffffff' }, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
-                        size="small"
-                      >
-                        <ChevronRight size={18} color="#0f172a" />
-                      </IconButton>
-                    )}
-
-                    {/* Bottom Category Label */}
-                    {vehiclePhotos[activePhotoIdx]?.category && (
-                      <Chip
-                        label={vehiclePhotos[activePhotoIdx].category}
-                        size="small"
-                        sx={{ position: 'absolute', bottom: 8, left: 8, bgcolor: 'rgba(15, 23, 42, 0.75)', color: '#ffffff', fontWeight: 600, fontSize: '0.7rem', backdropFilter: 'blur(4px)' }}
-                      />
-                    )}
+              {isInspectionPhotosOpen && (
+                vehiclePhotos.length === 0 ? (
+                  <Box sx={{ border: '1px dashed #cbd5e1', borderRadius: 2, p: 3, textAlign: 'center', bgcolor: '#f8fafc' }}>
+                    <ImageIcon size={32} color="#94a3b8" style={{ marginBottom: 8 }} />
+                    <Typography variant="body2" fontWeight={600} sx={{ color: '#475569' }}>
+                      No Vehicle Photos Uploaded
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                      Inspection photos uploaded during CRM job card creation will appear here.
+                    </Typography>
                   </Box>
+                ) : (
+                  <>
+                    {/* Main Photo Preview Box */}
+                    <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', bgcolor: '#0f172a', height: { xs: 200, sm: 240 }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Box
+                        component="img"
+                        src={vehiclePhotos[activePhotoIdx]?.url}
+                        alt={vehiclePhotos[activePhotoIdx]?.category || 'Vehicle Photo'}
+                        onClick={() => setIsPhotoLightboxOpen(true)}
+                        sx={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
+                      />
 
-                  {/* Thumbnails Row */}
-                  {vehiclePhotos.length > 1 && (
-                    <Box sx={{ display: 'flex', gap: 1, mt: 1.5, overflowX: 'auto', pb: 0.5 }}>
-                      {vehiclePhotos.map((photo, idx) => (
-                        <Box
-                          key={photo.id || idx}
-                          onClick={() => setActivePhotoIdx(idx)}
-                          sx={{
-                            width: 60,
-                            height: 48,
-                            borderRadius: 1.5,
-                            overflow: 'hidden',
-                            cursor: 'pointer',
-                            border: activePhotoIdx === idx ? '2px solid #2563eb' : '2px solid transparent',
-                            opacity: activePhotoIdx === idx ? 1 : 0.65,
-                            transition: 'all 0.15s ease',
-                            flexShrink: 0,
-                            bgcolor: '#0f172a'
-                          }}
+                      {/* Left Carousel Arrow */}
+                      {vehiclePhotos.length > 1 && (
+                        <IconButton
+                          onClick={(e) => { e.stopPropagation(); setActivePhotoIdx((prev) => (prev - 1 + vehiclePhotos.length) % vehiclePhotos.length); }}
+                          sx={{ position: 'absolute', left: 8, bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#ffffff' }, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
+                          size="small"
                         >
-                          <Box
-                            component="img"
-                            src={photo.url}
-                            alt={photo.category || `Thumbnail ${idx + 1}`}
-                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        </Box>
-                      ))}
+                          <ChevronLeft size={18} color="#0f172a" />
+                        </IconButton>
+                      )}
+
+                      {/* Right Carousel Arrow */}
+                      {vehiclePhotos.length > 1 && (
+                        <IconButton
+                          onClick={(e) => { e.stopPropagation(); setActivePhotoIdx((prev) => (prev + 1) % vehiclePhotos.length); }}
+                          sx={{ position: 'absolute', right: 8, bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: '#ffffff' }, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
+                          size="small"
+                        >
+                          <ChevronRight size={18} color="#0f172a" />
+                        </IconButton>
+                      )}
+
+                      {/* Bottom Category Label */}
+                      {vehiclePhotos[activePhotoIdx]?.category && (
+                        <Chip
+                          label={vehiclePhotos[activePhotoIdx].category}
+                          size="small"
+                          sx={{ position: 'absolute', bottom: 8, left: 8, bgcolor: 'rgba(15, 23, 42, 0.75)', color: '#ffffff', fontWeight: 600, fontSize: '0.7rem', backdropFilter: 'blur(4px)' }}
+                        />
+                      )}
                     </Box>
-                  )}
-                </>
+
+                    {/* Thumbnails Row */}
+                    {vehiclePhotos.length > 1 && (
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1.5, overflowX: 'auto', pb: 0.5 }}>
+                        {vehiclePhotos.map((photo, idx) => (
+                          <Box
+                            key={photo.id || idx}
+                            onClick={() => setActivePhotoIdx(idx)}
+                            sx={{
+                              width: 60,
+                              height: 48,
+                              borderRadius: 1.5,
+                              overflow: 'hidden',
+                              cursor: 'pointer',
+                              border: activePhotoIdx === idx ? '2px solid #2563eb' : '2px solid transparent',
+                              opacity: activePhotoIdx === idx ? 1 : 0.65,
+                              transition: 'all 0.15s ease',
+                              flexShrink: 0,
+                              bgcolor: '#0f172a'
+                            }}
+                          >
+                            <Box
+                              component="img"
+                              src={photo.url}
+                              alt={photo.category || `Thumbnail ${idx + 1}`}
+                              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </>
+                )
               )}
             </Card>
 
