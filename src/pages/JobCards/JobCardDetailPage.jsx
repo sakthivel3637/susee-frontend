@@ -153,8 +153,7 @@ export default function JobCardDetailPage() {
 
   const vehicleBrandModel = [
     jobCard.vehicle?.brand?.name,
-    jobCard.vehicle?.model,
-    jobCard.vehicle?.variant
+    jobCard.vehicle?.model
   ].filter(Boolean).join(' ');
   const complaintText = String(jobCard.customerComplaint || '').trim();
   const additionalNotesText = String(jobCard.additionalNotes || '').trim();

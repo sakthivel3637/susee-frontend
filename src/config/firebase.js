@@ -46,7 +46,15 @@ export async function requestNotificationPermissionAndRegister() {
         return;
       }
 
-      const token = await getToken(messaging, { vapidKey });
+      let serviceWorkerRegistration;
+      if ('serviceWorker' in navigator) {
+        serviceWorkerRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      }
+
+      const token = await getToken(messaging, {
+        vapidKey,
+        serviceWorkerRegistration
+      });
       if (token) {
         console.log('FCM token generated successfully:', token);
         localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);

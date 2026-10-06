@@ -298,11 +298,15 @@ export default function JobCardCreate() {
     return String(currentStatus?.code || service?.serviceStatusCode || '').trim().toUpperCase();
   };
 
-  const isServiceCompleted = (service) => {
-    // CANCELLED is intentionally NOT locked — user can change it back after selecting it.
-    // Pipeline gating (isServiceCompletedOrPostponed) still treats CANCELLED as terminal.
-    const code = getServiceStatusCode(service);
-    return [''].some((status) => code.includes(status));
+  const getSavedServiceStatusCode = (service) => {
+    const initialStatusId = String(service?.serviceStatusId || '');
+    const currentStatus = serviceStatusOptions.find((status) => String(status.value) === initialStatusId);
+    return String(currentStatus?.code || service?.serviceStatusCode || '').trim().toUpperCase();
+  };
+
+  const isSavedServiceCompleted = (service) => {
+    const code = getSavedServiceStatusCode(service);
+    return ['COMPLETED', 'POSTPONED', 'REJECTED', 'CANCELLED'].some((status) => code.includes(status));
   };
 
   const isServiceCompletedOrPostponed = (service) => {
@@ -323,13 +327,13 @@ export default function JobCardCreate() {
 
   const canEditServiceStatus = (service) => {
     const roleDepartment = getRoleDepartment();
-    if (roleDepartment === 'all') return !isServiceCompleted(service);
+    if (roleDepartment === 'all') return !isSavedServiceCompleted(service);
 
     const serviceDepartment = getServiceDepartment(service);
     return Boolean(roleDepartment)
       && (roleDepartment === serviceDepartment || roleDepartment === 'all')
       && arePreviousDepartmentsCompleted(serviceDepartment)
-      && !isServiceCompleted(service);
+      && !isSavedServiceCompleted(service);
   };
 
   const getAssignmentDepartment = (assignment) => {
