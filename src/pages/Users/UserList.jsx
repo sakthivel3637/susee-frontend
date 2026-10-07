@@ -177,25 +177,32 @@ export default function UserList() {
         </Box>
       ),
     },
-    {
-      header: 'Email',
+       {
+      header: 'Email & Contact',
       accessor: 'email',
       render: (row) => (
-        <Box component="a" href={`mailto:${row.email}`} sx={{ display: 'flex', alignItems: 'center', color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-          <Mail size={14} className="mr-2" /> {row.email}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+          <Box
+            component="a"
+            href={`mailto:${row.email}`}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              color: 'primary.main',
+              textDecoration: 'none',
+              '&:hover': { textDecoration: 'underline' },
+              fontWeight: 500,
+            }}
+          >
+            <Mail size={14} className="mr-2" /> {row.email}
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ pl: '22px' }}>
+            {row.mobile || '-'}
+          </Typography>
         </Box>
       ),
     },
-    { header: 'Mobile', accessor: 'mobile', render: (row) => row.mobile || '-' },
-    {
-      header: 'Role',
-      accessor: 'role',
-      render: (row) => (
-        <Typography variant="caption" sx={{ bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', py: 0.5, px: 1, borderRadius: 1, fontWeight: 600 }}>
-          {row.role?.name || '-'}
-        </Typography>
-      ),
-    },
+
     ...(isAdmin ? [{
       header: 'Location',
       accessor: 'locationName',

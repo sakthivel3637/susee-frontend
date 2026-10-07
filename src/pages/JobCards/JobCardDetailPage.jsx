@@ -391,6 +391,7 @@ export default function JobCardDetailPage() {
       title: 'Mechanical Work',
       subtitle: !hasMechanicalWork
         ? 'N/A (No Mechanical Services)'
+
         : (isMechanicalDone
           ? 'Mechanical Work Completed'
           : (mechanicalAssignments.length > 0
@@ -859,7 +860,7 @@ export default function JobCardDetailPage() {
                             <StatusBadge status={service.status} />
                           </Box>
                           <Box component="td" sx={{ p: 2, textAlign: 'right', fontWeight: 600 }}>
-                            {formatCurrency(service.price > 0 ? service.price : (index === 0 ? totalSubtotal * 0.6 : totalSubtotal * 0.4 / (defaultServices.length - 1 || 1)))}
+                            {formatCurrency(service.price > 0 ? service.price : (index === 0 ? rawTotalSubtotal * 0.6 : rawTotalSubtotal * 0.4 / (defaultServices.length - 1 || 1)))}
                           </Box>
                         </Box>
                       ))

@@ -11,7 +11,8 @@ import { formatCurrency } from '../../utils/formatters';
 import RHFSwitch from '../../components/form/RHFSwitch';
 import SearchBar from '../../components/common/SearchBar';
 import { toastSuccess, toastError, toastInfo, toastWarning } from '../../notifications/toast';
-import { getServiceItemsApi, updateServiceItemStatusApi, importServiceItemsApi } from '../../api/adminServiceItemApi';
+import { getServiceItemsApi, updateServiceItemStatusApi, importServiceItemsApi, exportServiceItemsTemplateApi } from '../../api/adminServiceItemApi';
+import { downloadExcelFile } from '../../utils/excelExport';
 import StatusFilter from '../../components/common/StatusFilter';
 import { usePermissions } from '../../hooks/usePermissions';
 
@@ -81,23 +82,15 @@ export default function ServiceItems() {
     setExcelAnchorEl(null);
   };
 
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
     handleExcelMenuClose();
-    const csvContent =
-      'Service Item Name,Category Group,Base Price \n' +
-      'Engine Oil Replacement,Mechanical,1500\n' +
-      'Front Bumper Painting,Body Shop,4500\n';
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'service_items_import_template.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toastSuccess('Sample template downloaded successfully!');
+    try {
+      const res = await exportServiceItemsTemplateApi();
+      downloadExcelFile(res, 'service_items_import_template.xlsx');
+      toastSuccess('Sample template downloaded successfully!');
+    } catch (error) {
+      toastError(error?.response?.data?.message || 'Failed to download Excel template');
+    }
   };
 
   const handleTriggerUpload = () => {
@@ -241,7 +234,7 @@ export default function ServiceItems() {
               style={{ display: 'none' }}
             />
             <Button
-              variant="outline"
+              variant="primary"
               leftIcon={FileSpreadsheet}
               rightIcon={ChevronDown}
               onClick={handleExcelMenuOpen}
@@ -321,11 +314,11 @@ export default function ServiceItems() {
         PaperProps={{ sx: { width: 200, borderRadius: 2, mt: 0.5 } }}
       >
         <MenuItem onClick={handleDownloadTemplate}>
-          <Download size={16} className="mr-3 text-primary" />
+          <Download size={22} strokeWidth={2} className="mr-4 text-primary" />
           Download Template
         </MenuItem>
         <MenuItem onClick={handleTriggerUpload}>
-          <Upload size={16} className="mr-3 text-success" />
+          <Upload size={20}     strokeWidth={2} className="mr-4 text-success" />
           Upload Excel
         </MenuItem>
       </Menu>
