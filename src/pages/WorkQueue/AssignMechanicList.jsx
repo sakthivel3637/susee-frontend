@@ -419,6 +419,13 @@ export default function AssignMechanicList() {
                 label={assigneeLabel}
                 onChange={(e) => setSelectedMechanic(e.target.value)}
                 sx={{ borderRadius: 2 }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 240,
+                    },
+                  },
+                }}
               >
                 {isMechanicsLoading && (
                   <MenuItem disabled value="">
@@ -466,6 +473,13 @@ export default function AssignMechanicList() {
                 label="Bay"
                 onChange={(e) => setSelectedBay(e.target.value)}
                 sx={{ borderRadius: 2 }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 240,
+                    },
+                  },
+                }}
               >
                 {isBaysLoading && (
                   <MenuItem disabled value="">

@@ -176,6 +176,8 @@ export const ENDPOINTS = {
       CREATE: '/admin/service-items/create',
       UPDATE: (id) => `/admin/service-items/update/${id}`,
       STATUS: (id) => `/admin/service-items/status/${id}`,
+      IMPORT: '/admin/service-items/import',
+      EXPORT_TEMPLATE: '/admin/service-items/export-template',
     },
     AUDIT_LOGS: {
       LIST: '/audit-logs/list',

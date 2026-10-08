@@ -158,9 +158,13 @@ export default function Topbar() {
     };
 
     socket.on("notification-created", handleRefresh);
+    socket.on("notification-read", handleRefresh);
+    socket.on("notification-read-all", handleRefresh);
 
     return () => {
       socket.off("notification-created", handleRefresh);
+      socket.off("notification-read", handleRefresh);
+      socket.off("notification-read-all", handleRefresh);
     };
   }, [canReadNotifications]);
 
@@ -177,9 +181,9 @@ export default function Topbar() {
         );
         fetchNotifications();
         if (payload?.notification) {
-          toastInfo(
-            `${payload.notification.title}: ${payload.notification.body}`,
-          );
+          // toastInfo(
+          //   `${payload.notification.title}: ${payload.notification.body}`,
+          // );
           if (Notification.permission === "granted") {
             try {
               new Notification(payload.notification.title, {
@@ -214,9 +218,9 @@ export default function Topbar() {
         fetchNotifications();
         const payload = event.data.payload;
         if (payload?.notification) {
-          toastInfo(
-            `${payload.notification.title}: ${payload.notification.body}`,
-          );
+          // toastInfo(
+          //   `${payload.notification.title}: ${payload.notification.body}`,
+          // );
         }
       }
     };
