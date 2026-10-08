@@ -185,7 +185,9 @@ export default function JobCardDetailPage() {
         price: Number(s.price || 0),
         quantity: Number(s.quantity || 1),
         status: s.serviceStatus?.statusCode || 'PENDING',
-        isAdditional: !!s.isAdditional
+        isAdditional: !!s.isAdditional,
+        category: s.category || s.serviceItem?.category,
+        categorySlug: s.categorySlug || s.category?.slug || s.serviceItem?.category?.slug
       })) || [])
   };
 
@@ -382,6 +384,11 @@ export default function JobCardDetailPage() {
   const bodyName = activeBody.assignedUser?.fullName || 'Unassigned';
   const bodyBay = activeBody.bay?.bayName || activeBody.bay?.bayCode || activeBody.bay?.name || '—';
 
+  const isMechanicalPostponed = services.filter(s => !isServiceBodyshop(s)).some(s => s.status === 'POSTPONED');
+  const isBodyshopPostponed = services.filter(s => isServiceBodyshop(s)).some(s => s.status === 'POSTPONED');
+  const isMechanicCurrentlyWorking = mechanicalAssignments.some(a => a.startedAt || getAssignmentStatusValue(a) === 'IN_PROGRESS');
+  const isBodyshopCurrentlyWorking = bodyshopAssignments.some(a => a.startedAt || getAssignmentStatusValue(a) === 'IN_PROGRESS');
+
   const timelineSteps = [
     {
       id: 'entry',
@@ -402,9 +409,13 @@ export default function JobCardDetailPage() {
         ? 'N/A (No Mechanical Services)'
         : (isMechanicalDone
           ? 'Mechanical Work Completed'
-          : (mechanicalAssignments.length > 0
-            ? `Assigned to ${mechName}${mechBay !== '—' ? ` · ${mechBay}` : ''}`
-            : 'In Progress / Pending Assignment')),
+          : (isMechanicalPostponed
+            ? 'Postponed'
+            : (mechanicalAssignments.length > 0
+              ? (isMechanicCurrentlyWorking
+                ? `In Progress by ${mechName}`
+                : `Assigned to ${mechName}${mechBay !== '—' ? ` · ${mechBay}` : ''}`)
+              : 'Pending Assignment'))),
       state: mechanicalState
     },
     {
@@ -422,9 +433,13 @@ export default function JobCardDetailPage() {
         ? 'N/A (No Body Shop Services)'
         : (isBodyshopDone
           ? 'Body Shop Work Completed'
-          : (bodyshopAssignments.length > 0
-            ? `Assigned to ${bodyName}${bodyBay !== '—' ? ` · ${bodyBay}` : ''}`
-            : 'Pending Body Shop Work')),
+          : (isBodyshopPostponed
+            ? 'Postponed'
+            : (bodyshopAssignments.length > 0
+              ? (isBodyshopCurrentlyWorking
+                ? `In Progress by ${bodyName}`
+                : `Assigned to ${bodyName}${bodyBay !== '—' ? ` · ${bodyBay}` : ''}`)
+              : 'Pending Body Shop Work'))),
       state: bodyshopState
     },
     {
