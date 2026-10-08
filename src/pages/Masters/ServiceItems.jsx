@@ -111,7 +111,14 @@ export default function ServiceItems() {
       if (res?.success) {
         const { importedCount, skippedCount, errors } = res.data || {};
         if (skippedCount > 0) {
-          toastWarning(`Import Result: ${importedCount || 0} added, ${skippedCount} duplicate(s) skipped. ${errors?.[0] || ''}`);
+          toastWarning(`Import Result: ${importedCount || 0} added, ${skippedCount} skipped.`);
+          // Show separate toasts for the errors (limit to 3 to prevent screen flooding)
+          if (Array.isArray(errors)) {
+            errors.slice(0, 3).forEach(err => toastWarning(err));
+            if (errors.length > 3) {
+              toastWarning(`...and ${errors.length - 3} more errors.`);
+            }
+          }
         } else {
           toastSuccess(`Imported ${importedCount || 0} service item(s) successfully!`);
         }

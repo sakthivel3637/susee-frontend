@@ -274,19 +274,29 @@ export default function JobCardDetailPage() {
   const assignedMechanicName = activeAssignment.assignedUser?.fullName || firstAssignment.assignedUser?.fullName || jobCard.technician || jobCard.assignedMechanic?.fullName || 'Unassigned';
   const assignedBayName = activeAssignment.bay?.bayName || activeAssignment.bay?.bayCode || activeAssignment.bay?.name || firstAssignment.bay?.bayName || firstAssignment.bay?.bayCode || firstAssignment.bay?.name || jobCard.bay?.bayName || jobCard.bay?.name || jobCard.assignedBay?.bayName || jobCard.assignedBay?.name || '—';
 
+  const isServiceBodyshop = (s) => {
+    const cat = String(s.categorySlug || s.category?.slug || s.serviceItem?.category?.slug || s.category || s.serviceItem?.category?.name || '').toLowerCase();
+    if (cat && (cat.includes('body') || cat.includes('mechanic'))) {
+      return cat.includes('body');
+    }
+    const name = String(s.name || '').toLowerCase();
+    return name.includes('body') || name.includes('denting') || name.includes('paint');
+  };
+
+  const isAssignmentBodyshop = (a) => {
+    const cat = String(a.jobCardService?.serviceItem?.category?.slug || a.service?.category?.slug || a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
+    if (cat && (cat.includes('body') || cat.includes('mechanic'))) {
+      return cat.includes('body');
+    }
+    return cat.includes('body') || cat.includes('denting') || cat.includes('paint');
+  };
+
   const computeServiceWorkStatus = () => {
     const services = displayJobCard.services || [];
     const assignments = jobCard?.workAssignments || [];
 
-    const hasMechanical = services.some(s => {
-      const cat = String(s.category || s.serviceItem?.category?.name || s.name || '').toLowerCase();
-      return cat.includes('mechanic') || cat.includes('floor');
-    }) || assignments.some(a => String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase().includes('mechanic'));
-
-    const hasBodyshop = services.some(s => {
-      const cat = String(s.category || s.serviceItem?.category?.name || s.name || '').toLowerCase();
-      return cat.includes('body') || cat.includes('denting') || cat.includes('paint');
-    }) || assignments.some(a => String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase().includes('body'));
+    const hasBodyshop = services.some(isServiceBodyshop) || assignments.some(isAssignmentBodyshop);
+    const hasMechanical = services.some(s => !isServiceBodyshop(s)) || assignments.some(a => !isAssignmentBodyshop(a));
 
     const isAllCompleted = services.length > 0 && services.every(s => {
       const st = String(s.status || s.serviceStatus?.statusCode || s.serviceStatus?.code || '').toUpperCase();
@@ -309,40 +319,21 @@ export default function JobCardDetailPage() {
   const services = displayJobCard?.services || [];
   const assignments = jobCard?.workAssignments || [];
 
-  const hasMechanicalWork = services.some(s => {
-    const name = String(s.name || '').toLowerCase();
-    return !name.includes('body') && !name.includes('denting') && !name.includes('paint');
-  }) || assignments.some(a => {
-    const cat = String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
-    return cat.includes('mechanic') || cat.includes('floor') || (!cat.includes('body') && !cat.includes('paint'));
-  });
+  const hasBodyshopWork = services.some(isServiceBodyshop) || assignments.some(isAssignmentBodyshop);
+  const hasMechanicalWork = services.some(s => !isServiceBodyshop(s)) || assignments.some(a => !isAssignmentBodyshop(a));
 
-  const hasBodyshopWork = services.some(s => {
-    const name = String(s.name || '').toLowerCase();
-    return name.includes('body') || name.includes('denting') || name.includes('paint');
-  }) || assignments.some(a => {
-    const cat = String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
-    return cat.includes('body') || cat.includes('denting') || cat.includes('paint');
-  });
-
-  const mechanicalAssignments = assignments.filter(a => {
-    const cat = String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
-    return !cat.includes('body') && !cat.includes('paint');
-  });
+  const mechanicalAssignments = assignments.filter(a => !isAssignmentBodyshop(a));
   const isMechanicalDone = hasMechanicalWork && (
     mechanicalAssignments.length > 0
       ? mechanicalAssignments.every(a => !!a.completedAt || getAssignmentStatusValue(a) === 'COMPLETED')
-      : services.filter(s => !String(s.name || '').toLowerCase().includes('body')).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
+      : services.filter(s => !isServiceBodyshop(s)).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
   );
 
-  const bodyshopAssignments = assignments.filter(a => {
-    const cat = String(a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
-    return cat.includes('body') || cat.includes('denting') || cat.includes('paint');
-  });
+  const bodyshopAssignments = assignments.filter(a => isAssignmentBodyshop(a));
   const isBodyshopDone = hasBodyshopWork && (
     bodyshopAssignments.length > 0
       ? bodyshopAssignments.every(a => !!a.completedAt || getAssignmentStatusValue(a) === 'COMPLETED')
-      : services.filter(s => String(s.name || '').toLowerCase().includes('body')).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
+      : services.filter(s => isServiceBodyshop(s)).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
   );
 
   const pendingApprovalsCount = (jobCard?.approvals || []).filter(a => {
@@ -361,17 +352,35 @@ export default function JobCardDetailPage() {
   const creatorActor = jobCard?.advisor?.fullName || jobCard?.createdByUser?.fullName || 'CRM Team';
   const estCostFormatted = formatCurrency(totalGrandTotal || displayJobCard?.estimatedCost || 0);
 
+  const isMechanicalActive = mechanicalAssignments.some(a => {
+    const st = getAssignmentStatusValue(a);
+    return st === 'IN_PROGRESS' || st === 'ASSIGNED';
+  });
+  
+  const isBodyshopActive = bodyshopAssignments.some(a => {
+    const st = getAssignmentStatusValue(a);
+    return st === 'IN_PROGRESS' || st === 'ASSIGNED';
+  });
+
   const mechanicalState = !hasMechanicalWork
     ? 'completed'
-    : (isMechanicalDone ? 'completed' : 'active');
+    : (isMechanicalDone ? 'completed' : (isMechanicalActive ? 'active' : (mechanicalAssignments.length === 0 ? 'in_progress' : 'pending')));
 
   const bodyshopState = !hasBodyshopWork
     ? 'completed'
-    : (isBodyshopDone ? 'completed' : (hasMechanicalWork && !isMechanicalDone ? 'pending' : 'active'));
+    : (isBodyshopDone ? 'completed' : (isBodyshopActive ? 'active' : (bodyshopAssignments.length === 0 ? 'in_progress' : 'pending')));
 
   const deliveryState = isJobDelivered
     ? 'completed'
     : ((!hasMechanicalWork || isMechanicalDone) && (!hasBodyshopWork || isBodyshopDone) && pendingApprovalsCount === 0 ? 'active' : 'pending');
+
+  const activeMech = mechanicalAssignments.find(a => !a.completedAt) || mechanicalAssignments[0] || {};
+  const mechName = activeMech.assignedUser?.fullName || jobCard.technician || jobCard.assignedMechanic?.fullName || 'Unassigned';
+  const mechBay = activeMech.bay?.bayName || activeMech.bay?.bayCode || activeMech.bay?.name || jobCard.bay?.bayName || jobCard.bay?.name || jobCard.assignedBay?.bayName || jobCard.assignedBay?.name || '—';
+
+  const activeBody = bodyshopAssignments.find(a => !a.completedAt) || bodyshopAssignments[0] || {};
+  const bodyName = activeBody.assignedUser?.fullName || 'Unassigned';
+  const bodyBay = activeBody.bay?.bayName || activeBody.bay?.bayCode || activeBody.bay?.name || '—';
 
   const timelineSteps = [
     {
@@ -391,11 +400,10 @@ export default function JobCardDetailPage() {
       title: 'Mechanical Work',
       subtitle: !hasMechanicalWork
         ? 'N/A (No Mechanical Services)'
-
         : (isMechanicalDone
           ? 'Mechanical Work Completed'
           : (mechanicalAssignments.length > 0
-            ? `Assigned to ${assignedMechanicName}${assignedBayName !== '—' ? ` · ${assignedBayName}` : ''}`
+            ? `Assigned to ${mechName}${mechBay !== '—' ? ` · ${mechBay}` : ''}`
             : 'In Progress / Pending Assignment')),
       state: mechanicalState
     },
@@ -415,7 +423,7 @@ export default function JobCardDetailPage() {
         : (isBodyshopDone
           ? 'Body Shop Work Completed'
           : (bodyshopAssignments.length > 0
-            ? 'In Progress — Body Shop Bay'
+            ? `Assigned to ${bodyName}${bodyBay !== '—' ? ` · ${bodyBay}` : ''}`
             : 'Pending Body Shop Work')),
       state: bodyshopState
     },
@@ -521,8 +529,14 @@ export default function JobCardDetailPage() {
     assignment.service?.category?.slug ||
     assignment.service?.category?.name || ''
   ).toLowerCase();
-  const isBodyShopCategory = (category) =>
-    category.includes('body') || category.includes('paint') || category.includes('denting');
+  
+  const isBodyShopCategory = (category) => {
+    if (category && (category.includes('body') || category.includes('mechanic'))) {
+      return category.includes('body');
+    }
+    return category.includes('body') || category.includes('paint') || category.includes('denting');
+  };
+
   const trackerMechAssignments = trackerAssignments.filter(
     assignment => !isBodyShopCategory(getAssignmentCategory(assignment))
   );
@@ -1167,22 +1181,30 @@ export default function JobCardDetailPage() {
                               ? '2px solid #10b981'
                               : step.state === 'active'
                                 ? '2px solid #2563eb'
-                                : '2px solid #cbd5e1',
-                            boxShadow: step.state === 'active' ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none',
+                                : step.state === 'in_progress'
+                                  ? '2px solid #d97706'
+                                  : '2px solid #cbd5e1',
+                            boxShadow: step.state === 'active'
+                              ? '0 0 0 3px rgba(37, 99, 235, 0.15)'
+                              : step.state === 'in_progress'
+                                ? '0 0 0 3px rgba(217, 119, 6, 0.15)'
+                                : 'none',
                             flexShrink: 0,
                             mt: 0.25
                           }}
                         >
                           <Box
                             sx={{
-                              width: step.state === 'active' ? 10 : 8,
-                              height: step.state === 'active' ? 10 : 8,
+                              width: (step.state === 'active' || step.state === 'in_progress') ? 10 : 8,
+                              height: (step.state === 'active' || step.state === 'in_progress') ? 10 : 8,
                               borderRadius: '50%',
                               bgcolor: step.state === 'completed'
                                 ? '#10b981'
                                 : step.state === 'active'
                                   ? '#2563eb'
-                                  : '#cbd5e1'
+                                  : step.state === 'in_progress'
+                                    ? '#d97706'
+                                    : '#cbd5e1'
                             }}
                           />
                         </Box>
@@ -1193,7 +1215,7 @@ export default function JobCardDetailPage() {
                             variant="body2"
                             fontWeight={700}
                             sx={{
-                              color: step.state === 'completed' || step.state === 'active' ? '#0f172a' : '#64748b',
+                              color: step.state === 'completed' || step.state === 'active' || step.state === 'in_progress' ? '#0f172a' : '#64748b',
                               lineHeight: 1.2
                             }}
                           >
@@ -1202,10 +1224,10 @@ export default function JobCardDetailPage() {
                           <Typography
                             variant="caption"
                             sx={{
-                              color: '#64748b',
+                              color: step.state === 'in_progress' ? '#d97706' : '#64748b',
                               display: 'block',
                               mt: 0.3,
-                              fontWeight: 500,
+                              fontWeight: step.state === 'in_progress' ? 600 : 500,
                               fontSize: '0.78rem'
                             }}
                           >
