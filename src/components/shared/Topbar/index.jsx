@@ -158,9 +158,13 @@ export default function Topbar() {
     };
 
     socket.on("notification-created", handleRefresh);
+    socket.on("notification-read", handleRefresh);
+    socket.on("notification-read-all", handleRefresh);
 
     return () => {
       socket.off("notification-created", handleRefresh);
+      socket.off("notification-read", handleRefresh);
+      socket.off("notification-read-all", handleRefresh);
     };
   }, [canReadNotifications]);
 

@@ -136,16 +136,48 @@ export default function NotificationPopup() {
         type: notif.type,
         jobCardId: notif.jobCardId || null,
         jobCardSlug: notif.jobCardSlug || null,
-        notifId: null, // Real-time socket events don't carry DB id
-        statusCode: notif.statusCode || null, // passed from unassigned mechanic monitor job
+        notifId: notif.id || null,
+        statusCode: notif.statusCode || null,
       }]);
     };
 
+    const handleNotificationRead = (data) => {
+      if (!data) return;
+      setQueue((prev) => prev.filter((item) => {
+        if (data.notificationId && item.notifId === data.notificationId) return false;
+        if (data.jobCardId && item.jobCardId === data.jobCardId) return false;
+        return true;
+      }));
+
+      setCurrent((curr) => {
+        if (!curr) return null;
+        if (data.notificationId && curr.notifId === data.notificationId) {
+          setOpen(false);
+          return null;
+        }
+        if (data.jobCardId && curr.jobCardId === data.jobCardId) {
+          setOpen(false);
+          return null;
+        }
+        return curr;
+      });
+    };
+
+    const handleNotificationReadAll = () => {
+      setQueue([]);
+      setOpen(false);
+      setCurrent(null);
+    };
+
     socket.on("notification-created", handleNotification);
+    socket.on("notification-read", handleNotificationRead);
+    socket.on("notification-read-all", handleNotificationReadAll);
 
     return () => {
       socket.off("connect", joinRoom);
       socket.off("notification-created", handleNotification);
+      socket.off("notification-read", handleNotificationRead);
+      socket.off("notification-read-all", handleNotificationReadAll);
     };
   }, [user?.id, user?.userId, enqueue]);
 
