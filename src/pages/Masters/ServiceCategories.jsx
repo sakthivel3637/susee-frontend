@@ -142,9 +142,18 @@ export default function ServiceCategories() {
     ...(canUpdateCategories ? [{
       header: 'Actions',
       render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
+        <Tooltip title="Edit">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(getEditPath(row));
+            }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        </Tooltip>
       )
     }] : [])
   ];
@@ -197,26 +206,6 @@ export default function ServiceCategories() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteItem(null)}
       />
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 180, borderRadius: 2, mt: 0.5 } }}
-      >
-        {canUpdateCategories && (
-          <MenuItem onClick={() => { handleMenuClose(); navigate(getEditPath(selectedCategory)); }}>
-            <Edit size={16} className="mr-3 text-primary" />
-            Edit
-          </MenuItem>
-        )}
-        {/* <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-          <Trash2 size={16} className="mr-3" />
-          Deactivate
-        </MenuItem> */}
-      </Menu>
     </Box>
   );
 }

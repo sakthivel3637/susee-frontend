@@ -271,12 +271,22 @@ export default function Topbar() {
     }
   };
 
-  const pageTitle =
-    location.pathname
-      .split("/")
-      .filter(Boolean)
-      .map((s) => s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
-      .join(" / ") || "Dashboard";
+  const getPageTitle = (pathname) => {
+    if (pathname === '/locations') return 'Service Center & Location';
+    if (pathname === '/locations/new') return 'Service Center & Location / Add';
+    if (pathname.startsWith('/locations/edit/')) return 'Service Center & Location / Edit';
+    if (pathname.startsWith('/locations/view/')) return 'Service Center & Location / Details';
+    if (pathname.startsWith('/locations/')) return 'Service Center & Location';
+    return (
+      pathname
+        .split("/")
+        .filter(Boolean)
+        .map((s) => s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
+        .join(" / ") || "Dashboard"
+    );
+  };
+
+  const pageTitle = getPageTitle(location.pathname);
 
   return (
     <AppBar

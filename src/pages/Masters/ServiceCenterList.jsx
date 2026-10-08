@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, IconButton, Menu, MenuItem, Typography } from '@mui/material';
+import { Box, Card, IconButton, Menu, MenuItem, Typography, Tooltip } from '@mui/material';
 import DataTable from '../../components/common/DataTable';
 import Button from '../../components/common/Button';
 import PageHeader from '../../components/shared/PageHeader';
@@ -127,9 +127,18 @@ export default function ServiceCenterList() {
     {
       header: 'Actions',
       render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
+        <Tooltip title="Edit">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(ROUTES.ADMIN_SERVICE_CENTERS_EDIT.replace(':id', row.id));
+            }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        </Tooltip>
       )
     }
   ];
@@ -187,28 +196,6 @@ export default function ServiceCenterList() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteItem(null)}
       />
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 180, borderRadius: 2, mt: 0.5 } }}
-      >
-        <MenuItem onClick={() => { handleMenuClose(); navigate(ROUTES.ADMIN_SERVICE_CENTERS_VIEW.replace(':id', selectedCenter?.id)); }}>
-          <Eye size={16} className="mr-3 text-blue-500" />
-          View
-        </MenuItem>
-        <MenuItem onClick={() => { handleMenuClose(); navigate(ROUTES.ADMIN_SERVICE_CENTERS_EDIT.replace(':id', selectedCenter?.id)); }}>
-          <Edit size={16} className="mr-3 text-primary" />
-          Edit
-        </MenuItem>
-        {/* <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-          <Trash2 size={16} className="mr-3" />
-          Deactivate
-        </MenuItem> */}
-      </Menu>
     </Box>
   );
 }

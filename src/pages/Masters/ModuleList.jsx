@@ -112,9 +112,18 @@ export default function ModuleList() {
     {
       header: 'Actions',
       render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
+        <Tooltip title="Edit Module">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(getEditPath(row));
+            }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        </Tooltip>
       )
     }
   ];
@@ -159,20 +168,6 @@ export default function ModuleList() {
           onRowsPerPageChange={setRowsPerPage}
         />
       </Card>
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 180, borderRadius: 2, mt: 0.5 } }}
-      >
-        <MenuItem onClick={() => { handleMenuClose(); navigate(getEditPath(selectedModule)); }}>
-          <Edit size={16} className="mr-3 text-primary" />
-          Edit Module
-        </MenuItem>
-      </Menu>
     </Box>
   );
 }

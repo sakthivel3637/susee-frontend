@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, MenuItem, IconButton, Select, Typography, Box, Card } from '@mui/material';
+import { Menu, MenuItem, IconButton, Select, Typography, Box, Card, Tooltip } from '@mui/material';
 import { Plus, Edit, Trash2, Mail, Search, MoreVertical, MapPin, Eye } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import Button from '../../components/common/Button';
@@ -121,12 +121,21 @@ export default function CustomerListPage() {
         )
       )
     },
-    ...(canReadCustomers || canUpdateCustomers ? [{
+    ...(canUpdateCustomers ? [{
       header: 'Actions',
       render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
+        <Tooltip title="Edit Customer">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/customers/edit/${row.slug || row.id}`);
+            }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        </Tooltip>
       )
     }] : [])
   ];
@@ -175,28 +184,6 @@ export default function CustomerListPage() {
           }}
         />
       </Card>
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 180, borderRadius: 2, mt: 0.5 } }}
-      >
-        {canReadCustomers && (
-          <MenuItem onClick={() => { handleMenuClose(); navigate(`/customers/view/${selectedCustomer?.slug || selectedCustomer?.id}`); }}>
-            <Eye size={16} style={{ marginRight: 12, color: '#0ea5e9' }} />
-            View Customer
-          </MenuItem>
-        )}
-        {canUpdateCustomers && (
-          <MenuItem onClick={() => { handleMenuClose(); navigate(`/customers/edit/${selectedCustomer?.slug || selectedCustomer?.id}`); }}>
-            <Edit size={16} style={{ marginRight: 12, color: '#0d9488' }} />
-            Edit Customer
-          </MenuItem>
-        )}
-
-      </Menu>
     </Box>
   );
 }

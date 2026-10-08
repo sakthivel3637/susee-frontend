@@ -153,9 +153,19 @@ export default function StageSchedules() {
     {
       header: 'Actions',
       render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
+        <Tooltip title="Edit">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              const identifier = row.slug || row.id;
+              navigate(ROUTES.MD_STAGE_SCHEDULES_EDIT.replace(':slug', identifier), { state: { schedule: row } });
+            }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        </Tooltip>
       )
     }
   ];
@@ -209,20 +219,6 @@ export default function StageSchedules() {
           }}
         />
       </Card>
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 160, borderRadius: 2, mt: 0.5 } }}
-      >
-        <MenuItem onClick={handleEdit}>
-          <Edit size={16} className="mr-3 text-primary" />
-          Edit
-        </MenuItem>
-      </Menu>
     </Box>
   );
 }

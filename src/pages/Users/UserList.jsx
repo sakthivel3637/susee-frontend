@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, IconButton, Menu, MenuItem, Typography, Select, Avatar } from '@mui/material';
+import { Box, Card, IconButton, Menu, MenuItem, Typography, Select, Avatar, Tooltip } from '@mui/material';
 import DataTable from '../../components/common/DataTable';
 import Button from '../../components/common/Button';
 import PageHeader from '../../components/shared/PageHeader';
@@ -235,14 +235,25 @@ export default function UserList() {
         <Typography variant="body2">-</Typography>
       ),
     },
-    {
+    ...(canUpdateUsers ? [{
       header: 'Actions',
       render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
+        <Tooltip title="Edit">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (getUserIdentifier(row)) {
+                navigate(getUserEditPath(row));
+              }
+            }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        </Tooltip>
       ),
-    },
+    }] : [])
   ];
 
   return (
@@ -375,40 +386,6 @@ export default function UserList() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteItem(null)}
       />
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 180, borderRadius: 2, mt: 0.5 } }}
-      >
-        <MenuItem onClick={() => {
-          if (getUserIdentifier(selectedUser)) {
-            navigate(getUserViewPath(selectedUser));
-          }
-          handleMenuClose();
-        }}>
-          <Eye size={16} className="mr-3 text-info" style={{ color: '#0284C7' }} />
-          View
-        </MenuItem>
-        {canUpdateUsers && (
-          <MenuItem onClick={() => {
-            if (getUserIdentifier(selectedUser)) {
-              navigate(getUserEditPath(selectedUser));
-            }
-            handleMenuClose();
-          }}>
-            <Edit size={16} className="mr-3 text-primary" />
-            Edit
-          </MenuItem>
-        )}
-        {/* <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-          <Trash2 size={16} className="mr-3" />
-          Deactivate
-        </MenuItem> */}
-      </Menu>
     </Box>
   );
 }

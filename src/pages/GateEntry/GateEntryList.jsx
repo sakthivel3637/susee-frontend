@@ -98,15 +98,6 @@ export default function GateEntryList({ onAddClick, onViewClick, onEntryClick })
     { header: 'Mobile', accessor: 'mobile', sortable: false },
     { header: 'Brand & Model', accessor: 'makeModel', sortable: false },
     { header: 'Status', sortable: false, render: (row) => <StatusBadge status={row.status} /> },
-    ...(canReadGateEntry || canCreateGateEntry || canUpdateGateEntry ? [{
-      header: 'Action',
-      sortable: false,
-      render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
-      ),
-    }] : []),
   ];
 
   return (
@@ -203,41 +194,7 @@ export default function GateEntryList({ onAddClick, onViewClick, onEntryClick })
         />
       </Card>
 
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 160, borderRadius: 2, mt: 0.5 } }}
-      >
-        {canReadGateEntry && (
-          <MenuItem onClick={() => {
-            const idOrSlug = selectedEntry?.slug || selectedEntry?.id;
-            handleMenuClose();
-            if (idOrSlug) navigate(`/gate-entry/view/${idOrSlug}`);
-          }}>
-            <Eye size={16} className="mr-3 text-primary" />
-            View
-          </MenuItem>
-        )}
-        {/* {canCreateGateEntry && (
-          <MenuItem onClick={() => { 
-            const entry = selectedEntry;
-            handleMenuClose(); 
-            if(onEntryClick) onEntryClick(entry); 
-          }}>
-            <LogIn size={16} className="mr-3 text-warning" />
-            Entry
-          </MenuItem>
-        )}
-        {canUpdateGateEntry && (
-          <MenuItem onClick={() => { handleMenuClose(); setExitVehicle(selectedEntry); setShowExitModal(true); }} sx={{ color: 'error.main' }}>
-            <LogOut size={16} className="mr-3" />
-            Exit
-          </MenuItem>
-        )} */}
-      </Menu>
+
 
       <Modal open={showExitModal} onClose={() => setShowExitModal(false)}>
         <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, bgcolor: 'background.paper', borderRadius: 3, boxShadow: 24, outline: 'none' }}>
