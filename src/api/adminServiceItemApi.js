@@ -35,3 +35,10 @@ export const importServiceItemsApi = async (file) => {
   return response;
 };
 
+export const exportServiceItemsTemplateApi = async () => {
+  const response = await axiosInstance.get(ENDPOINTS.ADMIN_MASTERS.SERVICE_ITEMS.EXPORT_TEMPLATE, {
+    responseType: 'blob'
+  });
+  return response;
+};
+
