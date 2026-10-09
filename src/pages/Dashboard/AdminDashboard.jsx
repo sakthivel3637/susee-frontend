@@ -1,5 +1,5 @@
 import { Grid, Box, Typography, Card, CardContent, Chip } from "@mui/material";
-import { Users, ShieldCheck, Wrench, ClipboardList,Mail } from "lucide-react";
+import { Users, ShieldCheck, Wrench, ClipboardList, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../config/routes";
 import { useAdminDashboard } from "../../queries/useDashboardQueries";
@@ -50,48 +50,45 @@ export default function AdminDashboard() {
       render: (row) => row.role?.name || "-",
     },
     {
-<<<<<<< HEAD
-      header: "Email",
+      header: "Email & Contact",
       accessor: "emailId",
-    },
-    {
-      header: "Mobile",
-      accessor: "mobileNo",
-      render: (row) => row.mobileNo || "-",
-=======
-      header: 'Email & Contact',
-      accessor: 'emailId',
       render: (row) => {
         const email = row.emailId || row.email;
         const mobile = row.mobileNo || row.mobile;
         return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
             {email ? (
               <Box
                 component="a"
                 href={`mailto:${email}`}
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: 'primary.main',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' },
+                  display: "flex",
+                  alignItems: "center",
+                  color: "primary.main",
+                  textDecoration: "none",
+                  "&:hover": { textDecoration: "underline" },
                   fontWeight: 500,
-                  fontSize: '0.875rem',
+                  fontSize: "0.875rem",
                 }}
               >
-                <Mail size={14} style={{ marginRight: '8px', flexShrink: 0 }} /> {email}
+                <Mail size={14} style={{ marginRight: "8px", flexShrink: 0 }} />{" "}
+                {email}
               </Box>
             ) : (
-              <Typography variant="body2" color="text.secondary">-</Typography>
+              <Typography variant="body2" color="text.secondary">
+                -
+              </Typography>
             )}
-            <Typography variant="caption" color="text.secondary" sx={{ pl: '22px' }}>
-              {mobile || '-'}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ pl: "22px" }}
+            >
+              {mobile || "-"}
             </Typography>
           </Box>
         );
       },
->>>>>>> 0ddbe5050b1217034ae4392ad51a3a62a73fa9b8
     },
     {
       header: "Status",
@@ -159,7 +156,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: '19px' }, bgcolor: "#F0F4FF", minHeight: "100%" }}>
+    <Box
+      sx={{ p: { xs: 2, md: "19px" }, bgcolor: "#F0F4FF", minHeight: "100%" }}
+    >
       {/* KPI Cards Row */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {kpis.map((kpi, i) => (
