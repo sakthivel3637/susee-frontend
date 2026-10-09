@@ -356,7 +356,7 @@ export default function JobCardDetailPage() {
     const st = getAssignmentStatusValue(a);
     return st === 'IN_PROGRESS' || st === 'ASSIGNED';
   });
-  
+
   const isBodyshopActive = bodyshopAssignments.some(a => {
     const st = getAssignmentStatusValue(a);
     return st === 'IN_PROGRESS' || st === 'ASSIGNED';
@@ -529,7 +529,7 @@ export default function JobCardDetailPage() {
     assignment.service?.category?.slug ||
     assignment.service?.category?.name || ''
   ).toLowerCase();
-  
+
   const isBodyShopCategory = (category) => {
     if (category && (category.includes('body') || category.includes('mechanic'))) {
       return category.includes('body');
@@ -1385,25 +1385,14 @@ export default function JobCardDetailPage() {
                   borderBottom: isAssignedWorkOpen ? '1px solid' : 'none',
                   borderColor: 'divider',
                   display: 'flex',
-                  justify: 'space-between',
-                  alignItems: 'center',
+                  flexDirection: 'column',
+                  gap: 1,
                   cursor: 'pointer',
                   userSelect: 'none'
                 }}
               >
-                <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#0f172a' }}>Assigned Mechanical Work</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Chip
-                    label={`${assignmentDetails.length} Assignment${assignmentDetails.length === 1 ? '' : 's'}`}
-                    size="small"
-                    sx={{
-                      fontWeight: 700,
-                      bgcolor: '#e0e7ff',
-                      color: '#4338ca',
-                      fontSize: '0.75rem',
-                      px: 0.5
-                    }}
-                  />
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#0f172a' }}>Assigned Mechanical Work</Typography>
                   <Box sx={{
                     width: 28,
                     height: 28,
@@ -1418,6 +1407,19 @@ export default function JobCardDetailPage() {
                   }}>
                     {isAssignedWorkOpen ? <Minus size={16} /> : <Plus size={16} />}
                   </Box>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Chip
+                    label={`${assignmentDetails.length} Assignment${assignmentDetails.length === 1 ? '' : 's'}`}
+                    size="small"
+                    sx={{
+                      fontWeight: 700,
+                      bgcolor: '#e0e7ff',
+                      color: '#4338ca',
+                      fontSize: '0.75rem',
+                      px: 0.5
+                    }}
+                  />
                 </Box>
               </Box>
               {isAssignedWorkOpen && (
