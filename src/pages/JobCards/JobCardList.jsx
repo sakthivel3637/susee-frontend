@@ -63,7 +63,7 @@ export default function JobCardList() {
     delivery: 'createdAt',
   };
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'mechanic');
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'all');
 
   useEffect(() => {
     if (location.state?.activeTab) {

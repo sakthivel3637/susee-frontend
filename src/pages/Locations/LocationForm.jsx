@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Box, Grid, Typography, Select } from '@mui/material';
+import { Box, Grid, Typography, IconButton, Tooltip } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import RHFTextField from '../../components/form/RHFTextField';
 import RHFTextarea from '../../components/form/RHFTextarea';
 import RHFSelect from '../../components/form/RHFSelect';
@@ -15,6 +16,7 @@ import { createLocationApi, updateLocationApi, getLocationApi } from '../../api/
 import { getStatesApi } from '../../api/adminStateApi';
 import { getDistrictsApi } from '../../api/adminDistrictApi';
 import { getServiceCentersApi } from '../../api/adminServiceCenterApi';
+import ServiceCenterModal from './ServiceCenterModal';
 
 import { commonValidations } from '../../validations/commonSchema';
 
@@ -43,6 +45,10 @@ export default function LocationForm() {
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
 
+  // Modal State
+  const [scModalOpen, setScModalOpen] = useState(false);
+  const [editingScId, setEditingScId] = useState(null);
+
   const methods = useForm({
     mode: 'onChange',
     resolver: zodResolver(schema),
@@ -62,6 +68,16 @@ export default function LocationForm() {
   const { handleSubmit, reset, control, setValue } = methods;
 
   const selectedStateId = useWatch({ control, name: 'stateId' });
+  const selectedServiceCenterId = useWatch({ control, name: 'serviceCenterId' });
+
+  const fetchServiceCentersList = async () => {
+    try {
+      const scRes = await getServiceCentersApi();
+      if (scRes?.success) setServiceCenters(scRes.data.serviceCenters || []);
+    } catch (error) {
+      console.error('Failed to load service centers list', error);
+    }
+  };
 
   useEffect(() => {
     const fetchDropdowns = async () => {
@@ -122,6 +138,12 @@ export default function LocationForm() {
   }, [isEdit, locationIdentifier, reset, navigate]);
 
   const onSubmit = async (data) => {
+    const selectedSc = serviceCenters.find(sc => Number(sc.id) === Number(data.serviceCenterId));
+    if (selectedSc && selectedSc.isActive === false) {
+      toastError(`Service Center "${selectedSc.serviceCenterName}" is inactive. Please activate it before saving.`);
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -152,17 +174,29 @@ export default function LocationForm() {
     }
   };
 
+  const handleOpenServiceCenterModal = (scId = null) => {
+    setEditingScId(scId);
+    setScModalOpen(true);
+  };
+
+  const handleServiceCenterSaved = async (savedSc, isEditMode) => {
+    await fetchServiceCentersList();
+    if (!isEditMode && savedSc?.id) {
+      setValue('serviceCenterId', savedSc.id, { shouldValidate: true, shouldDirty: true });
+    }
+  };
+
   const availableDistricts = districts.filter(d => d.stateId === Number(selectedStateId));
 
   return (
     <Box sx={{ bgcolor: 'background.paper', p: { xs: 2, md: '19px' }, borderRadius: 3, m: { xs: 2, md: '19px' } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h5" fontWeight={700}>
-          {isEdit ? 'Edit' : 'Add'} Location
+          {isEdit ? 'Edit' : 'Add'} Service Center & Location
         </Typography>
         <BackButton
           to={ROUTES.ADMIN_LOCATIONS}
-          label="Back to Locations"
+          label="Back to Service Center & Locations"
         />
       </Box>
 
@@ -174,13 +208,44 @@ export default function LocationForm() {
 
             <Grid container spacing={3} sx={{ mb: 3 }}>
               <Grid item xs={12} md={6}>
-                <RHFSelect
-                  name="serviceCenterId"
-                  label="Service Center"
-                  options={serviceCenters.filter(sc => sc.isActive !== false).map(sc => ({ value: sc.id, label: sc.serviceCenterName }))}
-                  placeholder="Select a Service Center"
-                  required
-                />
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <RHFSelect
+                      name="serviceCenterId"
+                      label="Service Center"
+                      options={serviceCenters.map((sc) => {
+                        const isInactive = sc.isActive === false;
+                        return {
+                          value: sc.id,
+                          label: `${sc.serviceCenterName}${isInactive ? ' (Inactive)' : ''}`,
+                          disabled: isInactive,
+                          action: (scId) => handleOpenServiceCenterModal(Number(scId)),
+                          actionTooltip: `Edit ${sc.serviceCenterName}`,
+                        };
+                      })}
+                      placeholder="Select a Service Center"
+                      required
+                    />
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 0.5, mt: 3.5 }}>
+                    <Tooltip title="Add New Service Center">
+                      <IconButton
+                        color="primary"
+                        onClick={() => handleOpenServiceCenterModal(null)}
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 1.5,
+                          p: 1.25,
+                          bgcolor: 'action.hover',
+                          '&:hover': { bgcolor: 'primary.main', color: 'common.white' }
+                        }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Box>
               </Grid>
               <Grid item xs={12} md={6}>
                 <RHFSelect
@@ -194,7 +259,6 @@ export default function LocationForm() {
             </Grid>
 
             <Grid container spacing={3} sx={{ mb: 3 }}>
-
 
               <Grid item xs={12} md={6}>
                 <RHFSelect
@@ -216,7 +280,6 @@ export default function LocationForm() {
             </Grid>
 
             <Grid container spacing={3} sx={{ mb: 3 }}>
-
 
               <Grid item xs={12} md={6}>
                 <RHFTextField
@@ -289,6 +352,14 @@ export default function LocationForm() {
           </form>
         </FormProvider>
       )}
+
+      {/* Service Center Quick Add / Edit Modal */}
+      <ServiceCenterModal
+        open={scModalOpen}
+        onClose={() => setScModalOpen(false)}
+        serviceCenterId={editingScId}
+        onSuccess={handleServiceCenterSaved}
+      />
     </Box>
   );
 }

@@ -149,19 +149,7 @@ export default function AuditLogs() {
           </Box>
         );
       }
-    },
-    {
-      header: 'Actions',
-      render: (row) => (
-        <IconButton
-          size="small"
-          onClick={() => navigate(`/audit-logs/${row.id}`)}
-          sx={{ color: 'primary.main', bgcolor: 'primary.50', '&:hover': { bgcolor: 'primary.100' }, width: 32, height: 32 }}
-        >
-          <Eye size={16} />
-        </IconButton>
-      ),
-    },
+    }
   ];
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Card, IconButton, Menu, MenuItem, Typography } from '@mui/material';
+import { Box, Card, IconButton, Menu, MenuItem, Typography, Tooltip } from '@mui/material';
 import DataTable from '../../components/common/DataTable';
 import Button from '../../components/common/Button';
 import PageHeader from '../../components/shared/PageHeader';
@@ -111,7 +111,14 @@ export default function ServiceItems() {
       if (res?.success) {
         const { importedCount, skippedCount, errors } = res.data || {};
         if (skippedCount > 0) {
-          toastWarning(`Import Result: ${importedCount || 0} added, ${skippedCount} duplicate(s) skipped. ${errors?.[0] || ''}`);
+          toastWarning(`Import Result: ${importedCount || 0} added, ${skippedCount} skipped.`);
+          // Show separate toasts for the errors (limit to 3 to prevent screen flooding)
+          if (Array.isArray(errors)) {
+            errors.slice(0, 3).forEach(err => toastWarning(err));
+            if (errors.length > 3) {
+              toastWarning(`...and ${errors.length - 3} more errors.`);
+            }
+          }
         } else {
           toastSuccess(`Imported ${importedCount || 0} service item(s) successfully!`);
         }
@@ -212,9 +219,18 @@ export default function ServiceItems() {
     ...(canUpdateItems ? [{
       header: 'Actions',
       render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
+        <Tooltip title="Edit">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(getEditPath(row));
+            }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        </Tooltip>
       )
     }] : [])
   ];
@@ -318,7 +334,7 @@ export default function ServiceItems() {
           Download Template
         </MenuItem>
         <MenuItem onClick={handleTriggerUpload}>
-          <Upload size={20}     strokeWidth={2} className="mr-4 text-success" />
+          <Upload size={20} strokeWidth={2} className="mr-4 text-success" />
           Upload Excel
         </MenuItem>
       </Menu>

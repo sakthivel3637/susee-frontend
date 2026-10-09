@@ -33,9 +33,10 @@ import { usePermissions } from "../../hooks/usePermissions";
 const flattenMenus = (menus) => {
   let flat = [];
   menus.forEach((m) => {
+    if (m.path === '/service-centers') return;
     flat.push({
       menuId: m.id || m.menuId,
-      name: m.name,
+      name: m.path === '/locations' ? 'Service Center & Location' : m.name,
       path: m.path,
       canRead: m.canRead || false,
       canCreate: m.canCreate || false,
@@ -521,7 +522,9 @@ export default function RolePrivilegesForm() {
                       (m) => m.module === mod.module,
                     );
 
-                    return mod.menus.map((menu, menuIndex) => {
+                    return mod.menus
+                      .filter((menu) => menu.path !== '/additional-work' && menu.path !== '/body-shop-additional-work')
+                      .map((menu, menuIndex) => {
                       const selectableActions = [
                         "canRead",
                         "canCreate",

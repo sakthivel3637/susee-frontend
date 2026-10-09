@@ -1,7 +1,7 @@
 import React from 'react';
 import { Edit, Plus, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Menu, MenuItem, IconButton, Typography } from '@mui/material';
+import { Box, Menu, MenuItem, IconButton, Typography, Tooltip } from '@mui/material';
 import Button from '../../components/common/Button';
 import PageHeader from '../../components/shared/PageHeader';
 import DataTable from '../../components/common/DataTable';
@@ -139,9 +139,18 @@ export default function RoleList() {
     ...(canUpdateRoles ? [{
       header: 'Actions',
       render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
+        <Tooltip title="Edit Privileges">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(getEditPath(row));
+            }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        </Tooltip>
       )
     }] : [])
   ];
@@ -195,26 +204,6 @@ export default function RoleList() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteItem(null)}
       />
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 180, borderRadius: 2, mt: 0.5 } }}
-      >
-        {canUpdateRoles && (
-          <MenuItem onClick={() => { handleMenuClose(); navigate(getEditPath(selectedRole)); }}>
-            <Edit size={16} style={{ marginRight: 12, color: '#0d9488' }} />
-            Edit
-          </MenuItem>
-        )}
-        {/* <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-          <Trash2 size={16} style={{ marginRight: 12, color: 'inherit' }} />
-          Deactivate
-        </MenuItem> */}
-      </Menu>
     </Box>
   );
 }

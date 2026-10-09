@@ -110,6 +110,11 @@ export default function LocationList() {
 
   const columns = [
     {
+      header: 'Service Center',
+      accessor: 'serviceCenter',
+      render: (row) => row.serviceCenter?.serviceCenterName || '-',
+    },
+    {
       header: 'Location Name',
       accessor: 'locationName',
       render: (row) => (
@@ -118,11 +123,6 @@ export default function LocationList() {
           <Typography variant="body2" fontWeight={600}>{row.locationName}</Typography>
         </Box>
       ),
-    },
-    {
-      header: 'Service Center',
-      accessor: 'serviceCenter',
-      render: (row) => row.serviceCenter?.serviceCenterName || '-',
     },
     {
       header: 'State / District',
@@ -147,9 +147,20 @@ export default function LocationList() {
     {
       header: 'Actions',
       render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
+        <Tooltip title="Edit">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (getLocationIdentifier(row)) {
+                navigate(getLocationEditPath(row));
+              }
+            }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        </Tooltip>
       ),
     },
   ];
@@ -157,7 +168,7 @@ export default function LocationList() {
   return (
     <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
-        title="Location Master"
+        title="Service Center & Location Master"
         // breadcrumbs={[{ label: 'Locations' }]}
         actions={
           <Button
@@ -165,7 +176,7 @@ export default function LocationList() {
             leftIcon={Plus}
             onClick={() => navigate(ROUTES.ADMIN_LOCATIONS_NEW)}
           >
-            Add Location
+            Add Service Center & Location
           </Button>
         }
       />
@@ -211,38 +222,6 @@ export default function LocationList() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteItem(null)}
       />
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 180, borderRadius: 2, mt: 0.5 } }}
-      >
-        <MenuItem onClick={() => {
-          if (getLocationIdentifier(selectedLocation)) {
-            navigate(getLocationViewPath(selectedLocation));
-          }
-          handleMenuClose();
-        }}>
-          <Eye size={16} className="mr-3 text-info" style={{ color: '#0284C7' }} />
-          View
-        </MenuItem>
-        <MenuItem onClick={() => {
-          if (getLocationIdentifier(selectedLocation)) {
-            navigate(getLocationEditPath(selectedLocation));
-          }
-          handleMenuClose();
-        }}>
-          <Edit size={16} className="mr-3 text-primary" />
-          Edit
-        </MenuItem>
-        {/* <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-          <Trash2 size={16} className="mr-3" />
-          Deactivate
-        </MenuItem> */}
-      </Menu>
     </Box>
   );
 }

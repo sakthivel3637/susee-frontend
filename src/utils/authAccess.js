@@ -113,7 +113,15 @@ export const getDepartmentFromModules = (modules = []) => {
 export const buildSidebarMenus = (modules = [], iconMap = {}) => {
   return modules
     .map((moduleItem) => {
-      const sourceMenus = (moduleItem.menus || []).filter((menu) => menu.canRead !== false && menu.path !== '/master-categories')
+      const sourceMenus = (moduleItem.menus || []).filter(
+        (menu) =>
+          menu.canRead !== false &&
+          menu.path !== '/master-categories' &&
+          menu.path !== '/service-centers' &&
+          // Hidden from sidebar menu as additional work is managed directly inside job cards
+          menu.path !== '/additional-work' &&
+          menu.path !== '/body-shop-additional-work'
+      );
       const menuMap = new Map();
 
       sourceMenus.forEach((menu) => {
@@ -137,12 +145,12 @@ export const buildSidebarMenus = (modules = [], iconMap = {}) => {
       return {
         ...moduleItem,
         menus: roots.map((menu) => ({
-          label: menu.name,
+          label: menu.path === '/locations' ? 'Service Center & Location' : menu.name,
           path: menu.path,
           icon: iconMap[menu.icon] || ICON_FALLBACK,
           children: (menu.children || [])
             .map((child) => ({
-              label: child.name,
+              label: child.path === '/locations' ? 'Service Center & Location' : child.name,
               path: child.path,
               icon: iconMap[child.icon] || ICON_FALLBACK
             }))

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, IconButton, Menu, MenuItem, Typography } from '@mui/material';
+import { Box, Card, IconButton, Menu, MenuItem, Typography, Tooltip } from '@mui/material';
 import DataTable from '../../components/common/DataTable';
 import Button from '../../components/common/Button';
 import PageHeader from '../../components/shared/PageHeader';
@@ -133,9 +133,18 @@ export default function BrandList() {
     ...(canUpdateBrands ? [{
       header: 'Actions',
       render: (row) => (
-        <IconButton size="small" onClick={(e) => handleMenuClick(e, row)}>
-          <MoreVertical size={18} />
-        </IconButton>
+        <Tooltip title="Edit">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(getEditPath(row), { state: { brand: row } });
+            }}
+          >
+            <Edit size={16} />
+          </IconButton>
+        </Tooltip>
       )
     }] : [])
   ];
@@ -179,25 +188,6 @@ export default function BrandList() {
           onRowsPerPageChange={setRowsPerPage}
         />
       </Card>
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 180, borderRadius: 2, mt: 0.5 } }}
-      >
-        {canUpdateBrands && (
-          <MenuItem onClick={() => {
-            handleMenuClose();
-            navigate(getEditPath(selectedBrand), { state: { brand: selectedBrand } });
-          }}>
-            <Edit size={16} className="mr-3 text-primary" />
-            Edit
-          </MenuItem>
-        )}
-      </Menu>
     </Box>
   );
 }
