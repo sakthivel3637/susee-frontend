@@ -220,7 +220,7 @@ export default function ServiceItems() {
   ];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Service Items"
         // breadcrumbs={[{ label: 'Service Items' }]}

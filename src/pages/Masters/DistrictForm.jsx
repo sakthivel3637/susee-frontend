@@ -96,7 +96,7 @@ export default function DistrictForm() {
   };
 
   return (
-    <Box sx={{ bgcolor: 'background.paper', p: { xs: 2, md: 4 }, borderRadius: 3, m: { xs: 2, md: 4 } }}>
+    <Box sx={{ bgcolor: 'background.paper', p: { xs: 2, md: '19px' }, borderRadius: 3, m: { xs: 2, md: '19px' } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h5" fontWeight={700}>
           {isEdit ? 'Edit' : 'Add'} District

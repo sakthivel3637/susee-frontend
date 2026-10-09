@@ -47,7 +47,7 @@ export default function DashboardLayout() {
         <NotificationPopup />
         <Box
           component="main"
-          sx={{ flexGrow: 1, pb: { xs: 2, md: 3 }, pt: 8, overflowY: "auto" }}
+          sx={{ flexGrow: 1, pb: { xs: 2, md: 3 }, pt: { xs: 1, md: 2 }, overflowY: "auto" }}
         >
           <Outlet />
         </Box>

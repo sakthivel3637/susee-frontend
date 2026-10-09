@@ -137,7 +137,7 @@ export default function DistrictList() {
   ];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Districts Master"
         // breadcrumbs={[{ label: 'Districts Master' }]}

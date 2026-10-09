@@ -21,7 +21,6 @@ import {
   Typography,
   Box,
   Badge,
-  Avatar,
   Menu,
   MenuItem,
   Divider,
@@ -33,7 +32,6 @@ import {
 import useAuthStore from "../../../store/useAuthStore";
 import useUIStore from "../../../store/useUIStore";
 import { ROUTES } from "../../../config/routes";
-import { getInitials, avatarColor } from "../../../utils/helpers";
 import { getMeApi } from "../../../api/authApi";
 import {
   getNotificationsApi,
@@ -284,17 +282,13 @@ export default function Topbar() {
 
   return (
     <AppBar
-      position="fixed"
+      position="static"
       color="default"
       elevation={0}
       sx={{
-        width: { lg: `calc(100% - ${effectiveCollapsed ? 80 : 260}px)` },
-        ml: { lg: `${effectiveCollapsed ? 80 : 260}px` },
-        borderBottom: "1px solid",
-        borderColor: "divider",
-        bgcolor: "background.paper",
-        transition: "width 0.3s, margin-left 0.3s",
-        zIndex: (theme) => theme.zIndex.drawer - 1,
+        bgcolor: "transparent",
+        backgroundImage: "none",
+        boxShadow: "none",
       }}
     >
       <Toolbar>
@@ -416,74 +410,6 @@ export default function Topbar() {
                 ))
               )}
             </Box>
-          </Menu>
-
-          <Box
-            onClick={(e) => setUserAnchorEl(e.currentTarget)}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              cursor: "pointer",
-              ml: 1,
-              p: 0.5,
-              pr: 1.5,
-              borderRadius: 0,
-              transition: "background-color 0.2s",
-              "&:hover": { bgcolor: "action.hover" },
-            }}
-          >
-            <Avatar
-              sx={{
-                bgcolor: avatarColor(user?.fullName || user?.name),
-                width: 32,
-                height: 32,
-                fontSize: "0.875rem",
-                mr: 1,
-              }}
-            >
-              {getInitials(user?.fullName || user?.name || "U")}
-            </Avatar>
-            <Box sx={{ display: { xs: "none", sm: "block" } }}>
-              <Typography variant="body2" fontWeight={600} lineHeight={1.2}>
-                {user?.fullName || user?.name || "User"}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {user?.role?.name || role}
-              </Typography>
-            </Box>
-            <ChevronDown
-              size={14}
-              style={{ marginLeft: 8, color: "#64748b" }}
-            />
-          </Box>
-
-          <Menu
-            anchorEl={userAnchorEl}
-            open={Boolean(userAnchorEl)}
-            onClose={() => setUserAnchorEl(null)}
-            PaperProps={{ sx: { width: 200, mt: 1.5, borderRadius: 1 } }}
-            transformOrigin={{ horizontal: "right", vertical: "top" }}
-            anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-          >
-            <MenuItem
-              onClick={() => {
-                navigate(ROUTES.PROFILE);
-                setUserAnchorEl(null);
-              }}
-            >
-              <ListItemIcon>
-                <User size={18} />
-              </ListItemIcon>
-              <ListItemText primary="Profile" />
-            </MenuItem>
-
-            <Divider />
-            <MenuItem onClick={handleLogout} sx={{ color: "error.main" }}>
-              <ListItemIcon sx={{ color: "inherit" }}>
-                <LogOut size={18} />
-              </ListItemIcon>
-              <ListItemText primary="Sign Out" />
-            </MenuItem>
           </Menu>
         </Box>
       </Toolbar>

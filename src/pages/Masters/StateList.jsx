@@ -132,7 +132,7 @@ export default function StateList() {
   ];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="State Master"
         // breadcrumbs={[{ label: 'States Master' }]}

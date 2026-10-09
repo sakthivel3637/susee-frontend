@@ -81,7 +81,7 @@ export default function VehicleEditPage() {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Edit Vehicle"
         breadcrumbs={[{ label: 'Vehicles', path: ROUTES.VEHICLES }, { label: 'Edit' }]}

@@ -17,7 +17,7 @@ export default function VehicleHistory() {
   if (isLoading) return <Loader fullPage text="Loading service history..." />;
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Service History"
         subtitle={identifier ? `Viewing history for vehicle ${identifier}` : 'Vehicle service records and previous job cards'}

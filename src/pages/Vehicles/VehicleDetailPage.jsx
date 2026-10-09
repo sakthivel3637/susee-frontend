@@ -20,7 +20,7 @@ export default function VehicleDetailPage() {
 
   if (!vehicle) {
     return (
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
+      <Box sx={{ p: { xs: 2, md: '19px' } }}>
         <Card sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
           <Typography variant="h6" fontWeight={800} sx={{ mb: 1 }}>Vehicle not found</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>The selected vehicle could not be located.</Typography>
@@ -55,7 +55,7 @@ export default function VehicleDetailPage() {
   });
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Vehicle Details"
         breadcrumbs={[{ label: 'Vehicles', path: ROUTES.VEHICLES }, { label: 'Details' }]}

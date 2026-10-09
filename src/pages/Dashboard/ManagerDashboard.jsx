@@ -16,13 +16,29 @@ import { ROUTES } from '../../config/routes';
 import { getManagerDashboardApi } from '../../api/dashboardApi';
 import useAuthStore from '../../store/useAuthStore';
 import Loader from '../../components/common/Loader';
+import KpiCard from '../../components/common/KpiCard';
 
-
-const ICON_MAP = {
-  'Total Today': Car,
-  'Completed': CheckCircle2,
-  'JC Pending': ClipboardList,
-  'Delayed': AlertTriangle
+const KPI_CONFIG = {
+  'Total Today': {
+    icon: Car,
+    theme: 'blue',
+    subtitle: 'Vehicles received today',
+  },
+  'JC Pending': {
+    icon: ClipboardList,
+    theme: 'amber',
+    subtitle: 'Awaiting job cards',
+  },
+  'Completed': {
+    icon: CheckCircle2,
+    theme: 'green',
+    subtitle: 'Jobs completed today',
+  },
+  'Delayed': {
+    icon: AlertTriangle,
+    theme: 'red',
+    subtitle: 'Behind SLA schedule',
+  },
 };
 
 const toneStyles = {
@@ -128,7 +144,7 @@ export default function ManagerDashboard() {
   ];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, minHeight: '100%' }}>
+    <Box sx={{ p: { xs: 2, md: '19px' }, minHeight: '100%' }}>
       {initialLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
           <Loader size="lg" text="Loading dashboard..." />
@@ -137,26 +153,20 @@ export default function ManagerDashboard() {
         <>
           <Grid container spacing={3} sx={{ mb: 3, mt: 0 }}>
             {data.kpis?.map((kpi) => {
-              const Icon = ICON_MAP[kpi.label] || Car;
+              const cfg = KPI_CONFIG[kpi.label] || {
+                icon: Car,
+                theme: 'blue',
+                subtitle: '',
+              };
               return (
                 <Grid item xs={12} sm={6} md={3} key={kpi.label}>
-                  <Card
-                    sx={{ borderRadius: 3, border: '1px solid #E2E8F0', borderTop: '6px solid', borderTopColor: kpi.color, boxShadow: '0 12px 24px -22px rgba(15, 23, 42, 0.7)', position: 'relative', overflow: 'hidden', bgcolor: '#FFFFFF', }}
-                  >
-                    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h3" sx={{ fontWeight: 900, color: kpi.color, lineHeight: 1 }}>
-                          {kpi.value}
-                        </Typography>
-                        <Box sx={{ width: 46, height: 46, borderRadius: 3, bgcolor: kpi.iconBg, color: kpi.color, display: 'grid', placeItems: 'center', }}>
-                          <Icon size={21} />
-                        </Box>
-                      </Box>
-                      <Typography variant="subtitle1" sx={{ color: '#334155', fontWeight: 800 }}>
-                        {kpi.label}
-                      </Typography>
-                    </Box>
-                  </Card>
+                  <KpiCard
+                    label={kpi.label}
+                    value={kpi.value}
+                    subtitle={cfg.subtitle}
+                    icon={cfg.icon}
+                    theme={cfg.theme}
+                  />
                 </Grid>
               );
             })}

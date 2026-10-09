@@ -165,7 +165,7 @@ export default function AuditLogs() {
   ];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Audit Logs"
         breadcrumbs={[{ label: 'Audit Logs' }]}

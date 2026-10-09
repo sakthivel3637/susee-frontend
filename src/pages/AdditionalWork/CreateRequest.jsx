@@ -448,7 +448,7 @@ export function AdditionalWorkRequestScreen({
 
   if (!jobCardId) {
     return (
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
+      <Box sx={{ p: { xs: 2, md: '19px' } }}>
         <PageHeader
           title={`Request ${resolvedDomainLabel}`}
           breadcrumbs={[{ label: resolvedDomainLabel, path: listRoute }, { label: 'New Request' }]}
@@ -465,7 +465,7 @@ export function AdditionalWorkRequestScreen({
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ p: { xs: 2, md: 4 }, bgcolor: '#F4F6F9', minHeight: '100%' }}>
+    <Box component="form" onSubmit={handleSubmit} sx={{ p: { xs: 2, md: '19px' }, bgcolor: '#F4F6F9', minHeight: '100%' }}>
       <PageHeader
         title={`${resolvedDomainLabel} / ${jobCard.jobCardNo || jobCard.slug || jobCard.id}`}
         subtitle={resolvedSubtitle}

@@ -1,139 +1,149 @@
-/* Enterprise Login Form UI */
-.loginHeader {
-  text-align: center;
-  margin-bottom: 2.5rem;
+/* Modern Floating-Card Auth Layout with 3D Background */
+.authContainer {
+  min-height: 100vh;
+  width: 100%;
+  background-size: cover;
+  background-position: center left;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 2rem 6vw;
+  box-sizing: border-box;
+  position: relative;
 }
 
-.loginTitle {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 0.5rem;
-  letter-spacing: -0.02em;
+/* Form Container positioned on the right */
+.formContainer {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  justify-content: center;
+  z-index: 10;
+}
+
+/* Floating White Modal Card */
+.formCard {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.14), 0 4px 16px rgba(15, 23, 42, 0.04);
+  padding: 2.25rem 2.5rem;
+  box-sizing: border-box;
+}
+
+/* Header with Logo and Subtitle */
+.loginHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.logoImg {
+  height: 90px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  margin-bottom: 1rem;
 }
 
 .loginSubtitle {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: #64748b;
   margin: 0;
-  font-weight: 400;
-}
-
-/* Demo Section */
-.demoSection {
-  margin-bottom: 1.5rem;
-}
-
-.demoSelect {
-  width: 100%;
-  padding: 0.85rem 1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background-color: #f8fafc;
-  color: #334155;
-  font-size: 0.95rem;
   font-weight: 500;
-  cursor: pointer;
-  appearance: none;
-  outline: none;
+}
+
+/* Input Fields */
+.inputField :global(.MuiOutlinedInput-root) {
+  background-color: #ffffff !important;
+  border-radius: 8px !important;
+  font-size: 0.9rem;
   transition: all 0.2s ease;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 1rem;
 }
 
-.demoSelect option {
-  background-color: #ffffff;
-  color: #0f172a;
+.inputField :global(.MuiOutlinedInput-notchedOutline) {
+  border-color: #e2e8f0 !important;
 }
 
-.demoSelect:hover {
-  border-color: #cbd5e1;
-  background-color: #ffffff;
+.inputField :global(.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline) {
+  border-color: #cbd5e1 !important;
 }
 
-.demoSelect:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-  background-color: #ffffff;
+.inputField :global(.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline) {
+  border-color: #0b2265 !important;
+  border-width: 1.5px !important;
 }
 
-/* Divider */
-.divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 0.85rem;
-  font-weight: 500;
-  margin: 1.5rem 0;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.divider:not(:empty)::before {
-  margin-right: 1rem;
-}
-
-.divider:not(:empty)::after {
-  margin-left: 1rem;
-}
-
-/* Forgot */
-.forgotRow {
+/* Forgot Password Link */
+.forgotLinkContainer {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 2rem;
-  margin-top: -0.25rem;
+  margin-top: -6px;
+  margin-bottom: 1.25rem;
 }
 
 .forgotLink {
-  font-size: 0.85rem;
-  color: #4f46e5;
-  font-weight: 500;
+  font-size: 0.82rem;
+  color: #1d4ed8;
+  font-weight: 600;
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color 0.15s ease;
 }
 
 .forgotLink:hover {
-  color: #4338ca;
+  color: #0b2265;
   text-decoration: underline;
 }
 
-/* Form Overrides */
-.formWrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.formWrapper label {
-  color: #334155 !important;
-  font-weight: 600;
-  margin-bottom: 0.35rem;
-  font-size: 0.9rem;
-}
-
-.formWrapper input {
-  background: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
-  color: #0f172a !important;
+/* Primary Submit Button */
+.submitBtn {
+  background-color: #0b2265 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 0.92rem !important;
+  padding: 0.7rem 1.5rem !important;
   border-radius: 8px !important;
-  padding: 0.75rem 1rem !important;
-  transition: all 0.2s ease;
+  text-transform: none !important;
+  box-shadow: 0 4px 14px rgba(11, 34, 101, 0.22) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.formWrapper input::placeholder {
-  color: #94a3b8 !important;
+.submitBtn:hover {
+  background-color: #071746 !important;
+  box-shadow: 0 6px 18px rgba(11, 34, 101, 0.32) !important;
+  transform: translateY(-1px);
 }
 
-.formWrapper input:focus {
-  border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+/* Footer Copyright */
+.footerCopyright {
+  margin-top: 1.75rem !important;
+  color: #3b82f6 !important;
+  font-size: 0.72rem !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+  letter-spacing: 0.01em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .authContainer {
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    background-position: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .formCard {
+    padding: 1.75rem 1.5rem;
+    border-radius: 18px;
+  }
 }

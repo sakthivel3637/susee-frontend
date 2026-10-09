@@ -638,7 +638,7 @@ export default function JobCardDetailPage() {
   ).trim();
 
   return (
-    <Box sx={{ minHeight: '100%', p: { xs: 2, md: 4 } }}>
+    <Box sx={{ minHeight: '100%', p: { xs: 2, md: '19px' } }}>
       {/* Top Header */}
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Box>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   Bell,
@@ -44,10 +44,16 @@ import {
   useMediaQuery,
   Tooltip,
   Popover,
+  Avatar,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import useAuthStore from "../../../store/useAuthStore";
 import useUIStore from "../../../store/useUIStore";
 import { buildSidebarMenus } from "../../../utils/authAccess";
+import { ROUTES } from "../../../config/routes";
+import { getInitials, avatarColor } from "../../../utils/helpers";
+import { removeRegisteredDeviceToken } from "../../../config/firebase";
 import logoImg from "../../../assets/img/logo.jpg";
 
 const ICON_MAP = {
@@ -80,15 +86,17 @@ const ICON_MAP = {
 
 export default function Sidebar() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
   const isDesktopFlyout = useMediaQuery("(min-width: 1201px)");
   const { pathname } = useLocation();
-  const { menus: allowedMenus } = useAuthStore();
+  const { menus: allowedMenus, user, role, logout } = useAuthStore();
   const { sidebarCollapsed, sidebarMobileOpen, setSidebarMobileOpen } =
     useUIStore();
   const isLaptop = useMediaQuery("(max-width: 1366px)");
   const [userHasToggled, setUserHasToggled] = useState(false);
   const [lastCollapsedVal, setLastCollapsedVal] = useState(sidebarCollapsed);
+  const [userAnchorEl, setUserAnchorEl] = useState(null);
 
   useEffect(() => {
     if (sidebarCollapsed !== lastCollapsedVal) {
@@ -98,6 +106,13 @@ export default function Sidebar() {
   }, [sidebarCollapsed, lastCollapsedVal]);
 
   const effectiveCollapsed = sidebarCollapsed || (isLaptop && !userHasToggled);
+
+  const handleLogout = async () => {
+    setUserAnchorEl(null);
+    await removeRegisteredDeviceToken();
+    logout();
+    navigate(ROUTES.LOGIN);
+  };
 
   const [expandedGroups, setExpandedGroups] = useState({});
   const [hoverAnchorEl, setHoverAnchorEl] = useState(null);
@@ -193,20 +208,35 @@ export default function Sidebar() {
                 }
               }}
               sx={{
-                borderRadius: 0,
+                borderRadius: "8px",
                 mb: 0.5,
                 mx: 1,
-                bgcolor: groupActive ? "primary.main" : "transparent",
-                color: groupActive ? "primary.contrastText" : "inherit",
+                bgcolor: "transparent",
+                background: groupActive
+                  ? "linear-gradient(90deg, #eff6ff 0%, #dbeafe 100%)"
+                  : "transparent",
+                boxShadow: groupActive
+                  ? "inset 0 0 0 1px #bfdbfe"
+                  : "none",
+                color: groupActive ? "#000F7E" : "#475569",
                 "&:hover": {
-                  bgcolor: groupActive ? "primary.main" : "action.hover",
+                  bgcolor: groupActive
+                    ? undefined
+                    : "#f1f5f9",
+                  background: groupActive
+                    ? "linear-gradient(90deg, #eff6ff 0%, #dbeafe 100%)"
+                    : undefined,
+                  color: "#000F7E",
                 },
                 justifyContent: isCollapsedState ? "center" : "flex-start",
               }}
             >
               {Icon && (
                 <ListItemIcon
-                  sx={{ minWidth: isCollapsedState ? 0 : 40, color: "inherit" }}
+                  sx={{
+                    minWidth: isCollapsedState ? 0 : 40,
+                    color: groupActive ? "#000F7E" : "#64748b",
+                  }}
                 >
                   <Icon size={20} />
                 </ListItemIcon>
@@ -229,14 +259,23 @@ export default function Sidebar() {
                           ? "rotate(90deg)"
                           : "rotate(0deg)",
                       transition: "transform 200ms ease-in-out",
+                      color: groupActive
+                        ? "#000F7E"
+                        : "#94a3b8",
                     }}
                   >
                     <ChevronRight size={16} />
                   </Box>
                 ) : isExpanded ? (
-                  <ChevronDown size={16} />
+                  <ChevronDown
+                    size={16}
+                    color={groupActive ? "#000F7E" : "#94a3b8"}
+                  />
                 ) : (
-                  <ChevronRight size={16} />
+                  <ChevronRight
+                    size={16}
+                    color={groupActive ? "#000F7E" : "#94a3b8"}
+                  />
                 ))}
             </ListItemButton>
           </Tooltip>
@@ -271,11 +310,11 @@ export default function Sidebar() {
                   overflowY: "auto",
                   overflowX: "hidden",
                   scrollBehavior: "smooth",
-                  bgcolor: "background.paper",
-                  border: "1px solid",
-                  borderColor: "divider",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                  borderRadius: "4px",
+                  background: "#ffffff",
+                  color: "#1e293b",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05)",
+                  borderRadius: "8px",
                   py: 1,
                   pointerEvents: "auto",
                 },
@@ -314,7 +353,7 @@ export default function Sidebar() {
               handlePopoverClose();
             }}
             sx={{
-              borderRadius: 0,
+              borderRadius: "8px",
               pl: isCollapsedState
                 ? "auto"
                 : isDesktopFlyout && depth > 0
@@ -323,28 +362,26 @@ export default function Sidebar() {
                     ? 4
                     : 2,
               justifyContent: isCollapsedState ? "center" : "flex-start",
-              bgcolor: active
-                ? depth > 0
-                  ? "rgba(26, 67, 77, 0.08)"
-                  : "primary.main"
+              color: active ? "#000F7E" : "#475569",
+              background: active
+                ? "linear-gradient(90deg, #eff6ff 0%, #dbeafe 100%)"
                 : "transparent",
-              color: active
-                ? depth > 0
-                  ? "primary.main"
-                  : "primary.contrastText"
-                : "inherit",
+              boxShadow: active ? "inset 0 0 0 1px #bfdbfe" : "none",
               "&:hover": {
-                bgcolor: active
-                  ? depth > 0
-                    ? "rgba(26, 67, 77, 0.08)"
-                    : "primary.main"
-                  : "action.hover",
+                background: active
+                  ? "linear-gradient(90deg, #eff6ff 0%, #dbeafe 100%)"
+                  : undefined,
+                bgcolor: active ? undefined : "#f1f5f9",
+                color: "#000F7E",
               },
             }}
           >
             {Icon && (
               <ListItemIcon
-                sx={{ minWidth: isCollapsedState ? 0 : 40, color: "inherit" }}
+                sx={{
+                  minWidth: isCollapsedState ? 0 : 40,
+                  color: active ? "#000F7E" : "#64748b",
+                }}
               >
                 <Icon size={depth > 0 ? 16 : 20} />
               </ListItemIcon>
@@ -370,23 +407,24 @@ export default function Sidebar() {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        bgcolor: "background.paper",
-        borderRight: "1px solid",
-        borderColor: "divider",
+        background: "#ffffff",
+        borderRight: "1px solid #e2e8f0",
+        color: "#1e293b",
         overflow: { xs: "auto", lg: "hidden" },
       }}
     >
       {/* Brand */}
       <Box
         sx={{
-          height: 64,
+          height: 65,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          px: 0,
+          px: 2,
           width: "100%",
           overflow: "hidden",
           flexShrink: 0,
+          background: "transparent",
         }}
       >
         <Box
@@ -394,16 +432,16 @@ export default function Sidebar() {
           src={logoImg}
           alt="Logo"
           sx={{
-            width: "100%",
-            height: "100%",
-            maxHeight: "64px",
+            maxHeight: "65px",
             maxWidth: "100%",
+            objectFit: "contain",
+            margin: "0 auto",
             transition: "all 0.2s ease-in-out",
           }}
         />
       </Box>
 
-      <Divider />
+      <Divider sx={{ borderColor: "#f1f5f9" }} />
 
       {/* Nav */}
       <Box
@@ -419,15 +457,158 @@ export default function Sidebar() {
             background: "transparent",
           },
           "&::-webkit-scrollbar-thumb": {
-            background: "rgba(0, 0, 0, 0.1)",
+            background: "rgba(0, 0, 0, 0.12)",
             borderRadius: "4px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            background: "rgba(0, 0, 0, 0.2)",
+            background: "rgba(0, 0, 0, 0.25)",
           },
         }}
       >
         <List>{menus.map((item) => renderMenuItem(item))}</List>
+      </Box>
+
+      {/* User Profile */}
+      <Divider sx={{ borderColor: "#f1f5f9" }} />
+      <Box
+        sx={{
+          p: 1.5,
+          flexShrink: 0,
+        }}
+      >
+        <Tooltip
+          title={effectiveCollapsed && !isMobile ? (user?.fullName || user?.name || "User") : ""}
+          placement="right"
+          arrow
+        >
+          <Box
+            onClick={(e) => setUserAnchorEl(e.currentTarget)}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: effectiveCollapsed && !isMobile ? "center" : "space-between",
+              cursor: "pointer",
+              p: 1,
+              borderRadius: "8px",
+              transition: "background-color 0.2s",
+              "&:hover": { bgcolor: "#f1f5f9" },
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                minWidth: 0,
+                gap: 1.2,
+              }}
+            >
+              <Avatar
+                sx={{
+                  bgcolor: avatarColor(user?.fullName || user?.name),
+                  width: 34,
+                  height: 34,
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  flexShrink: 0,
+                }}
+              >
+                {getInitials(user?.fullName || user?.name || "U")}
+              </Avatar>
+
+              {(!effectiveCollapsed || isMobile) && (
+                <Box sx={{ minWidth: 0, overflow: "hidden" }}>
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    noWrap
+                    sx={{ color: "#0f172a", lineHeight: 1.2 }}
+                  >
+                    {user?.fullName || user?.name || "User"}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    noWrap
+                    sx={{ color: "#64748b", display: "block" }}
+                  >
+                    {user?.role?.name || role}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+
+            {(!effectiveCollapsed || isMobile) && (
+              <ChevronDown
+                size={16}
+                color="#94a3b8"
+                style={{ flexShrink: 0, marginLeft: 4 }}
+              />
+            )}
+          </Box>
+        </Tooltip>
+
+        <Menu
+          anchorEl={userAnchorEl}
+          open={Boolean(userAnchorEl)}
+          onClose={() => setUserAnchorEl(null)}
+          PaperProps={{
+            sx: {
+              minWidth: 200,
+              background: "#ffffff",
+              color: "#1e293b",
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05)",
+              borderRadius: "8px",
+              py: 0.5,
+              mb: 1,
+            },
+          }}
+          transformOrigin={{
+            horizontal: "left",
+            vertical: "bottom",
+          }}
+          anchorOrigin={{
+            horizontal: effectiveCollapsed && !isMobile ? "right" : "left",
+            vertical: "top",
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+              navigate(ROUTES.PROFILE);
+              setUserAnchorEl(null);
+              if (isMobile) setSidebarMobileOpen(false);
+            }}
+            sx={{
+              color: "#334155",
+              "&:hover": {
+                bgcolor: "#f1f5f9",
+                color: "#000F7E",
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: "inherit" }}>
+              <User size={18} />
+            </ListItemIcon>
+            <ListItemText primary="Profile" />
+          </MenuItem>
+
+          <Divider sx={{ borderColor: "#f1f5f9", my: 0.5 }} />
+
+          <MenuItem
+            onClick={handleLogout}
+            sx={{
+              color: "#ef4444",
+              "&:hover": {
+                bgcolor: "#fef2f2",
+                color: "#dc2626",
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: "inherit" }}>
+              <LogOut size={18} />
+            </ListItemIcon>
+            <ListItemText primary="Sign Out" />
+          </MenuItem>
+        </Menu>
       </Box>
     </Box>
   );
@@ -445,7 +626,12 @@ export default function Sidebar() {
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: "block", lg: "none" },
-          "& .MuiDrawer-paper": { boxSizing: "border-box", width: 260 },
+          "& .MuiDrawer-paper": {
+            boxSizing: "border-box",
+            width: 260,
+            background: "#ffffff",
+            color: "#1e293b",
+          },
         }}
       >
         {drawerContent}
@@ -460,6 +646,9 @@ export default function Sidebar() {
             boxSizing: "border-box",
             width: sidebarWidth,
             height: "100vh",
+            background: "#ffffff",
+            color: "#1e293b",
+            borderRight: "1px solid #e2e8f0",
             transition: theme.transitions.create("width", {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.enteringScreen,

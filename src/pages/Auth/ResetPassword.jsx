@@ -2,14 +2,14 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { KeyRound, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { Box, Typography } from '@mui/material';
 import RHFTextField from '../../components/form/RHFTextField';
 import Button from '../../components/common/Button';
 import { toastSuccess, toastError } from '../../notifications/toast';
 import { resetPasswordApi } from '../../api/authApi';
+import logoImg from '../../assets/img/logo.jpg';
 import styles from './Auth.module.css';
-import { Box } from '@mui/material';
-
 import { commonValidations } from '../../validations/commonSchema';
 
 const schema = z.object({
@@ -38,32 +38,63 @@ export default function ResetPassword() {
   };
 
   return (
-    <div>
+    <Box>
       <div className={styles.loginHeader}>
-        <div className={styles.loginIcon}>
-          <KeyRound size={24} />
-        </div>
-        <div>
-          <h2 className={styles.loginTitle}>Reset Password</h2>
-          <p className={styles.loginSubtitle}>Create a new password for your account</p>
-        </div>
+        <img src={logoImg} alt="Susee Group Of Companies" className={styles.logoImg} />
+        <p className={styles.loginSubtitle}>Create a new password for your account</p>
       </div>
 
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(onSubmit)} noValidate>
-          <RHFTextField name="password" label="New Password" placeholder="Enter new password" type="password" required />
-          <RHFTextField name="confirmPassword" label="Confirm Password" placeholder="Confirm your new password" type="password" required />
-          <Button type="submit" variant="primary" fullWidth isLoading={methods.formState.isSubmitting}>
-            Reset Password
+          <Box sx={{ mb: 1 }}>
+            <RHFTextField
+              name="password"
+              label="New Password"
+              required
+              placeholder="Enter new password"
+              type="password"
+              className={styles.inputField}
+            />
+          </Box>
+
+          <Box sx={{ mb: 2 }}>
+            <RHFTextField
+              name="confirmPassword"
+              label="Confirm Password"
+              required
+              placeholder="Confirm your new password"
+              type="password"
+              className={styles.inputField}
+            />
+          </Box>
+
+          <Button
+            type="submit"
+            fullWidth
+            isLoading={methods.formState.isSubmitting}
+            size="lg"
+            className={styles.submitBtn}
+          >
+            <span>Reset Password</span>
+            <CheckCircle size={16} />
           </Button>
         </form>
       </FormProvider>
 
-      <div className="mt-4 text-center">
-        <Box component={Link} to="/login" className="back-btn">
-          <ArrowLeft size={14} /> Back to Sign In
-        </Box>
+      <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
+        <Link
+          to="/login"
+          className={styles.forgotLink}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+        >
+          <ArrowLeft size={16} /> Back to Sign In
+        </Link>
       </div>
-    </div>
+
+      <Typography className={styles.footerCopyright}>
+        &copy; 2026 Susee Group Of Companies. All rights reserved.
+      </Typography>
+    </Box>
   );
 }
+

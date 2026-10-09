@@ -106,8 +106,9 @@ export default function DataTable({
                   return (
                     <TableCell
                       key={index}
+                      className={col.className}
                       sx={{
-                        bgcolor: "#f0f4ff",
+                        bgcolor: "#F0F4FF",
                         color: "#000000",
                         fontSize: "0.875rem",
                         fontWeight: 700,
@@ -119,6 +120,7 @@ export default function DataTable({
                         width: isActionColumn ? "1%" : col.width || "auto",
                         "&:first-of-type": { pl: 4 },
                         "&:last-of-type": { pr: 4 },
+                        ...col.sx,
                       }}
                       width={isActionColumn ? "1%" : col.width || "auto"}
                     >
@@ -172,6 +174,7 @@ export default function DataTable({
                       return (
                         <TableCell
                           key={colIndex}
+                          className={col.className}
                           sx={{
                             py: 2.25,
                             px: 3,
@@ -183,6 +186,7 @@ export default function DataTable({
                             width: isActionColumn ? "1%" : col.width || "auto",
                             "&:first-of-type": { pl: 4 },
                             "&:last-of-type": { pr: 4 },
+                            ...col.sx,
                           }}
                         >
                           {col.render
@@ -263,12 +267,12 @@ export default function DataTable({
                   },
                 },
                 "& .Mui-selected": {
-                  bgcolor: "#000f7e!important",
+                  background: "linear-gradient(145deg, #0d2f6e 0%, #1a4fc4 50%, #3b82f6 100%) !important",
                   color: "#FFFFFF !important",
                   border: "none",
-                  boxShadow: "0 2px 4px rgba(37, 99, 235, 0.2)",
+                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.25)",
                   "&:hover": {
-                    bgcolor: "#000f7e !important",
+                    background: "linear-gradient(145deg, #0b275c 0%, #1745ad 50%, #3273dd 100%) !important",
                   },
                 },
               }}

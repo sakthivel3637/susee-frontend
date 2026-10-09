@@ -91,7 +91,7 @@ export default function VehicleList() {
   const tableData = data?.data || [];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Vehicle Management"
         breadcrumbs={[{ label: 'Vehicles' }]}

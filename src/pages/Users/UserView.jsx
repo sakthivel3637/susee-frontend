@@ -92,16 +92,16 @@ export default function UserView() {
 
   if (loading) {
     return (
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
+      <Box sx={{ p: { xs: 2, md: '19px' } }}>
         <Loader text="Loading user details..." />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h5" fontWeight={800}>User Details</Typography>
+        <Typography variant="h5" fontWeight={700}>User Details</Typography>
         <BackButton to={ROUTES.ADMIN_USERS} label="Back to Users" />
       </Box>
 

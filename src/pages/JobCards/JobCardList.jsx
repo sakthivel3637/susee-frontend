@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Box, Card, Typography, IconButton, Menu, MenuItem, Select, Chip, Tabs, Tab } from '@mui/material';
+import { Box, Card, Typography, IconButton, Menu, MenuItem, Select, Chip, Tabs, Tab, useMediaQuery } from '@mui/material';
 import DataTable from '../../components/common/DataTable';
 import { Plus, Eye, Edit, MoreVertical, PlusCircle, MessageCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import { useJobCards, useJobCardStatuses } from '../../queries/useDataQueries';
@@ -29,6 +29,7 @@ const PRIORITY_COLORS = {
 export default function JobCardList() {
   const navigate = useNavigate();
   const { menus } = useAuthStore();
+  const isWideScreen = useMediaQuery('(min-width: 1400px)');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(0);
@@ -202,89 +203,102 @@ export default function JobCardList() {
         );
       }
     },
-    {
-      header: 'WORK TYPE',
-      accessor: 'workType',
-      render: (row) => {
-        const type = row.workType || 'Mechanic';
+    ...(isWideScreen
+      ? [
+          {
+            header: 'WORK TYPE',
+            accessor: 'workType',
+            render: (row) => {
+              const type = row.workType || 'Mechanic';
 
-        let chipBg = '#eff6ff';
-        let chipColor = '#1d4ed8';
-        let chipBorder = '#bfdbfe';
+              let chipBg = '#eff6ff';
+              let chipColor = '#1d4ed8';
+              let chipBorder = '#bfdbfe';
 
-        if (type === 'Both') {
-          chipBg = '#f3e8ff';
-          chipColor = '#7e22ce';
-          chipBorder = '#d8b4fe';
-        } else if (type === 'Body Shop') {
-          chipBg = '#fff7ed';
-          chipColor = '#c2410c';
-          chipBorder = '#ffedd5';
-        }
+              if (type === 'Both') {
+                chipBg = '#f3e8ff';
+                chipColor = '#7e22ce';
+                chipBorder = '#d8b4fe';
+              } else if (type === 'Body Shop') {
+                chipBg = '#fff7ed';
+                chipColor = '#c2410c';
+                chipBorder = '#ffedd5';
+              }
 
-        return (
-          <Chip
-            label={type}
-            size="small"
-            sx={{
-              bgcolor: chipBg,
-              color: chipColor,
-              border: `1px solid ${chipBorder}`,
-              fontWeight: 600,
-              borderRadius: '9999px'
-            }}
-          />
-        );
-      }
-    },
-    {
-      header: 'MECHANIC',
-      accessor: 'technician',
-      render: (row) => {
-        const mechanicStr = row.technician || 'Unassigned';
-        const mechanics = mechanicStr.split(',').map(name => name.trim()).filter(Boolean);
-        return (
-          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-            {mechanics.map((mechanicName, idx) => (
-              <Chip
-                key={idx}
-                label={mechanicName}
-                size="small"
-                sx={{
-                  bgcolor: mechanicName === 'Unassigned' ? 'transparent' : '#eff6ff',
-                  color: mechanicName === 'Unassigned' ? '#d97706' : '#2563eb',
-                  border: `1px solid ${mechanicName === 'Unassigned' ? '#fcd34d' : '#bfdbfe'}`,
-                  fontWeight: 600,
-                  borderRadius: '9999px'
-                }}
-              />
-            ))}
-          </Box>
-        );
-      }
-    },
-    {
-      header: 'BAY',
-      accessor: 'bay',
-      render: (row) => {
-        const bay = row.bay || row.assignedBay;
-        const bayName = bay?.bayName || bay?.bayCode || 'Unassigned';
+              return (
+                <Chip
+                  label={type}
+                  size="small"
+                  sx={{
+                    bgcolor: chipBg,
+                    color: chipColor,
+                    border: `1px solid ${chipBorder}`,
+                    fontWeight: 600,
+                    borderRadius: '9999px',
+                  }}
+                />
+              );
+            },
+          },
+          {
+            header: 'MECHANIC',
+            accessor: 'technician',
+            render: (row) => {
+              const mechanicStr = row.technician || 'Unassigned';
+              const mechanics = mechanicStr
+                .split(',')
+                .map((name) => name.trim())
+                .filter(Boolean);
+              return (
+                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                  {mechanics.map((mechanicName, idx) => (
+                    <Chip
+                      key={idx}
+                      label={mechanicName}
+                      size="small"
+                      sx={{
+                        bgcolor:
+                          mechanicName === 'Unassigned'
+                            ? 'transparent'
+                            : '#eff6ff',
+                        color:
+                          mechanicName === 'Unassigned' ? '#d97706' : '#2563eb',
+                        border: `1px solid ${
+                          mechanicName === 'Unassigned' ? '#fcd34d' : '#bfdbfe'
+                        }`,
+                        fontWeight: 600,
+                        borderRadius: '9999px',
+                      }}
+                    />
+                  ))}
+                </Box>
+              );
+            },
+          },
+          {
+            header: 'BAY',
+            accessor: 'bay',
+            render: (row) => {
+              const bay = row.bay || row.assignedBay;
+              const bayName = bay?.bayName || bay?.bayCode || 'Unassigned';
 
-        return (
-          <Chip
-            label={bayName}
-            size="small"
-            sx={{
-              bgcolor: bay ? '#ecfdf5' : 'transparent',
-              color: bay ? '#047857' : '#64748b',
-              border: `1px solid ${bay ? '#a7f3d0' : '#cbd5e1'}`,
-              fontWeight: 600,
-              borderRadius: '9999px'
-            }}
-          />
-        );
-      }
-    },
+              return (
+                <Chip
+                  label={bayName}
+                  size="small"
+                  sx={{
+                    bgcolor: bay ? '#ecfdf5' : 'transparent',
+                    color: bay ? '#047857' : '#64748b',
+                    border: `1px solid ${bay ? '#a7f3d0' : '#cbd5e1'}`,
+                    fontWeight: 600,
+                    borderRadius: '9999px',
+                  }}
+                />
+              );
+            },
+          },
+        ]
+      : []),
     { header: 'Est. Cost', render: (row) => <Typography variant="body2" fontWeight={600}>{formatCurrency(row.totalEstimate)}</Typography> },
     {
       header: (
@@ -344,7 +358,7 @@ export default function JobCardList() {
   const tableData = data?.data || [];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Job Cards"
         breadcrumbs={[{ label: 'Job Cards' }]}

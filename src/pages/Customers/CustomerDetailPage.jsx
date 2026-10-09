@@ -68,7 +68,7 @@ export default function CustomerDetailPage() {
 
   if (isLoading) {
     return (
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
+      <Box sx={{ p: { xs: 2, md: '19px' } }}>
         <Loader text="Loading customer details..." />
       </Box>
     );
@@ -76,7 +76,7 @@ export default function CustomerDetailPage() {
 
   if (!customer) {
     return (
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
+      <Box sx={{ p: { xs: 2, md: '19px' } }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Typography variant="h5" fontWeight={800}>Customer Details</Typography>
           <BackButton to={ROUTES.CUSTOMERS} label="Back to Customers" />
@@ -89,7 +89,7 @@ export default function CustomerDetailPage() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h5" fontWeight={800}>Customer Details</Typography>
         <BackButton to={ROUTES.CUSTOMERS} label="Back to Customers" />

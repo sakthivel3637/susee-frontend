@@ -150,7 +150,7 @@ export default function ServiceCategories() {
   ];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Service Categories"
         // breadcrumbs={[{ label: 'Categories' }]}

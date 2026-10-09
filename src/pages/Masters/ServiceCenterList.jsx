@@ -135,7 +135,7 @@ export default function ServiceCenterList() {
   ];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Service Centers Master"
         // breadcrumbs={[{ label: 'Service Centers Master' }]}

@@ -125,7 +125,7 @@ export default function StatusList() {
   ];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <PageHeader
         title="Status Master"
         // breadcrumbs={[{ label: 'Statuses' }]}

@@ -88,7 +88,7 @@ export default function LocationView() {
 
   if (loading) {
     return (
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
+      <Box sx={{ p: { xs: 2, md: '19px' } }}>
         <Card sx={{ p: 4, borderRadius: 0, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
           <Skeleton variant="rectangular" height={240} sx={{ borderRadius: 0 }} />
         </Card>
@@ -97,9 +97,9 @@ export default function LocationView() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h5" fontWeight={800}>Location Details</Typography>
+        <Typography variant="h5" fontWeight={700}>Location Details</Typography>
         <BackButton to={ROUTES.ADMIN_LOCATIONS} label="Back to Locations" />
       </Box>
 

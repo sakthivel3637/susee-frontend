@@ -3,17 +3,17 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#000F7E', // --blue
-      light: '#000F7E', // --blue-light
-      dark: '#1e3a8a', // --navy
+      main: '#2050B7', // --blue
+      light: '#2050B7', // --blue-light
+      dark: '#0D205B', // --navy
     },
     secondary: {
       main: '#0891b2', // --cyan
-      light: '#000F7E',
-      dark: '#1e3a8a',
+      light: '#2050B7',
+      dark: '#2050B7',
     },
     success: {
-      main: '#000F7E', // --success
+      main: '#2050B7', // --success
     },
     error: {
       main: '#dc2626', // --danger
@@ -25,7 +25,7 @@ const theme = createTheme({
       main: '#000F7E', // --blue
     },
     background: {
-      default: '#f0f4ff', // --bg
+      default: '#F0F4FF', // --bg
       paper: '#ffffff', // --surface
     },
     text: {
@@ -36,13 +36,13 @@ const theme = createTheme({
     divider: '#dce6f5', // --border
   },
   typography: {
-    fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
-    h1: { fontWeight: 800 },
+    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
+    h1: { fontWeight: 700 },
     h2: { fontWeight: 700 },
     h3: { fontWeight: 700 },
-    h4: { fontWeight: 600 },
-    h5: { fontWeight: 600 },
-    h6: { fontWeight: 600 },
+    h4: { fontWeight: 700 },
+    h5: { fontWeight: 700 },
+    h6: { fontWeight: 700 },
     subtitle1: { fontWeight: 600 },
     button: {
       textTransform: 'none',
@@ -62,18 +62,19 @@ const theme = createTheme({
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         },
         containedPrimary: {
-          background: 'linear-gradient(135deg, #000F7E 0%, #000F7E 100%)',
+          background: 'linear-gradient(145deg, #0d2f6e 0%, #1a4fc4 50%, #3b82f6 100%)',
+          color: '#ffffff',
           boxShadow: '0 1px 3px rgba(37, 99, 235, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06)',
           '&:hover': {
-            background: '#1e3a8a',
-            boxShadow: '0 4px 16px rgba(37, 99, 235, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
+            background: 'linear-gradient(145deg, #0b275c 0%, #1745ad 50%, #3273dd 100%)',
+            boxShadow: '0 4px 16px rgba(37, 99, 235, 0.2), 0 2px 4px rgba(0, 0, 0, 0.06)',
           },
         },
         containedSecondary: {
           background: 'linear-gradient(135deg, #0891b2 0%, #3b82f6 100%)',
           boxShadow: 'none',
           '&:hover': {
-            background: '#1e3a8a',
+            background: '#2050B7',
             boxShadow: '0 4px 16px rgba(37, 99, 235, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
           },
         },
@@ -172,7 +173,7 @@ const theme = createTheme({
     MuiTableHead: {
       styleOverrides: {
         root: {
-          backgroundColor: '#f0f4ff', // --bg (#f0f4ff)
+          backgroundColor: '#F0F4FF', // --bg (#F0F4FF)
           '& .MuiTableCell-root': {
             color: '#475569', // --text2
             fontWeight: 600,
@@ -191,7 +192,7 @@ const theme = createTheme({
         root: {
           transition: 'background-color 0.2s ease',
           '&:nth-of-type(even)': {
-            backgroundColor: '#f0f4ff',
+            backgroundColor: '#F0F4FF',
           },
           '&:hover': {
             backgroundColor: '#E0E8FF !important',
@@ -225,7 +226,7 @@ const theme = createTheme({
             '&:focus-within': { outline: 'none' },
           },
           '& .MuiDataGrid-columnHeaders': {
-            backgroundColor: '#f0f4ff', // --bg (#f0f4ff)
+            backgroundColor: '#F0F4FF', // --bg (#F0F4FF)
             borderBottom: '1px solid #dce6f5', // --border
             color: '#475569', // --text2
             fontWeight: 600,
@@ -245,6 +246,23 @@ const theme = createTheme({
           '& .MuiDataGrid-footerContainer': {
             borderTop: '1px solid #dce6f5', // --border
             backgroundColor: '#ffffff', // --white
+          },
+        },
+      },
+    },
+    MuiPaginationItem: {
+      styleOverrides: {
+        root: {
+          fontWeight: 600,
+          borderRadius: 8,
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&.Mui-selected': {
+            background: 'linear-gradient(145deg, #0d2f6e 0%, #1a4fc4 50%, #3b82f6 100%) !important',
+            color: '#ffffff !important',
+            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+            '&:hover': {
+              background: 'linear-gradient(145deg, #0b275c 0%, #1745ad 50%, #3273dd 100%) !important',
+            },
           },
         },
       },

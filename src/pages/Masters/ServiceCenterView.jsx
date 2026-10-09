@@ -88,7 +88,7 @@ export default function ServiceCenterView() {
 
   if (loading) {
     return (
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
+      <Box sx={{ p: { xs: 2, md: '19px' } }}>
         <Card sx={{ p: 4, borderRadius: 0, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
           <Skeleton variant="rectangular" height={240} sx={{ borderRadius: 0 }} />
         </Card>
@@ -97,9 +97,9 @@ export default function ServiceCenterView() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={{ p: { xs: 2, md: '19px' } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h5" fontWeight={800}>Service Center Details</Typography>
+        <Typography variant="h5" fontWeight={700}>Service Center Details</Typography>
         <BackButton to={ROUTES.ADMIN_SERVICE_CENTERS} label="Back to Service Centers" />
       </Box>
 
