@@ -100,7 +100,7 @@ export default function StageSchedules() {
       render: (row) => (
         <Box>
           <Typography variant="body2" fontWeight={600}>{row.statusName}</Typography>
-          <Typography variant="caption" color="text.secondary">{row.stageCode}</Typography>
+          <Typography variant="caption" color="text.secondary">{row.stageCode ? row.stageCode.replace(/_/g, ' ') : ''}</Typography>
         </Box>
       )
     },

@@ -522,7 +522,9 @@ export default function RolePrivilegesForm() {
                       (m) => m.module === mod.module,
                     );
 
-                    return mod.menus.map((menu, menuIndex) => {
+                    return mod.menus
+                      .filter((menu) => menu.path !== '/additional-work' && menu.path !== '/body-shop-additional-work')
+                      .map((menu, menuIndex) => {
                       const selectableActions = [
                         "canRead",
                         "canCreate",

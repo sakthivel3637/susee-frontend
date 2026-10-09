@@ -117,7 +117,10 @@ export const buildSidebarMenus = (modules = [], iconMap = {}) => {
         (menu) =>
           menu.canRead !== false &&
           menu.path !== '/master-categories' &&
-          menu.path !== '/service-centers'
+          menu.path !== '/service-centers' &&
+          // Hidden from sidebar menu as additional work is managed directly inside job cards
+          menu.path !== '/additional-work' &&
+          menu.path !== '/body-shop-additional-work'
       );
       const menuMap = new Map();
 
