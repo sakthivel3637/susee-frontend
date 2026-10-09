@@ -159,8 +159,7 @@ export default function StageSchedules() {
             color="primary"
             onClick={(e) => {
               e.stopPropagation();
-              const identifier = row.slug || row.id;
-              navigate(ROUTES.MD_STAGE_SCHEDULES_EDIT.replace(':slug', identifier), { state: { schedule: row } });
+              navigate(ROUTES.MD_STAGE_SCHEDULES_EDIT.replace(':id', row.id), { state: { schedule: row } });
             }}
           >
             <Edit size={16} />

@@ -177,7 +177,7 @@ export default function UserList() {
         </Box>
       ),
     },
-       {
+    {
       header: 'Email & Contact',
       accessor: 'email',
       render: (row) => (
@@ -201,6 +201,18 @@ export default function UserList() {
           </Typography>
         </Box>
       ),
+    },
+    {
+      header: 'Role',
+      accessor: 'role',
+      render: (row) => {
+        const roleName = row.role?.name || row.roleName || (typeof row.role === 'string' ? row.role : '');
+        return (
+          <Typography variant="body2" color="text.primary">
+            {roleName || '-'}
+          </Typography>
+        );
+      },
     },
 
     ...(isAdmin ? [{

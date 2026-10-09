@@ -80,7 +80,7 @@ const toOptions = (items, getLabel) => items.map((item) => ({
 export default function StageScheduleForm() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const isEdit = Boolean(id);
+  const isEdit = Boolean(id && id !== ':id');
   const previousModuleId = useRef();
 
   const [modules, setModules] = useState([]);
