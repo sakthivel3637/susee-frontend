@@ -19,6 +19,20 @@ function normalizePayload(payload) {
   return payload?.data?.data || payload?.data || payload || null;
 }
 
+function resolveCategoryName(service, jobCard) {
+  const rawCat = service?.categoryName || service?.category || service?.serviceItem?.category?.name || service?.serviceItem?.category?.slug;
+  if (rawCat && typeof rawCat === 'string' && rawCat.trim()) {
+    const lower = rawCat.toLowerCase().trim();
+    if (lower.includes('water') || lower.includes('wash')) return 'Water Wash';
+    if (lower.includes('body') || lower.includes('paint') || lower.includes('dent')) return 'Body Shop';
+    return rawCat;
+  }
+  const name = String(service?.serviceName || service?.name || service?.description || '').toLowerCase();
+  if (name.includes('water') || name.includes('wash')) return 'Water Wash';
+  if (name.includes('body') || name.includes('paint') || name.includes('dent')) return 'Body Shop';
+  return jobCard?.serviceType ? snakeToLabel(jobCard.serviceType) : 'Mechanical';
+}
+
 function serviceRows(jobCard) {
   const services = jobCard?.jobCardServices || jobCard?.services || [];
 
@@ -30,7 +44,7 @@ function serviceRows(jobCard) {
       return {
         id: `${service}-${index}`,
         name: service,
-        category: jobCard?.serviceType ? snakeToLabel(jobCard.serviceType) : 'Mechanical',
+        category: resolveCategoryName({ name: service }, jobCard),
         qty: 1,
         price: Math.round(subtotal),
         status: index === 0 ? 'In Progress' : 'Approved',
@@ -40,7 +54,7 @@ function serviceRows(jobCard) {
     return {
       id: service.id || index,
       name: service.serviceName || service.name || service.description || 'Service item',
-      category: service.categoryName || service.category || 'Mechanical',
+      category: resolveCategoryName(service, jobCard),
       qty: service.quantity || 1,
       price: Number(service.priceSnapshot || service.price || service.amount || 0),
       status: service.approvalStatus?.name || service.approvalStatus?.code || service.serviceStatus?.name || service.serviceStatus?.code || service.status || 'Approved',
@@ -332,16 +346,61 @@ export function AdditionalWorkRequestScreen({
   });
   const context = normalizePayload(contextPayload);
   const activeDepartment = String(context?.department || categoryParam || 'mechanical').toLowerCase();
-  const isBodyShopDept = activeDepartment === 'body-shop' || activeDepartment === 'bodyshop';
+  const isWaterWashDept =
+    activeDepartment === 'water-wash' ||
+    activeDepartment === 'waterwash' ||
+    activeDepartment === 'water wash' ||
+    activeDepartment === 'washing' ||
+    activeDepartment === 'wash' ||
+    String(categoryParam).toLowerCase().includes('water') ||
+    String(context?.department).toLowerCase().includes('water') ||
+    (Array.isArray(context?.currentServices) && context.currentServices.length > 0 && context.currentServices.every(s => {
+      const cat = String(s?.category || s?.categorySlug || s?.categoryName || '').toLowerCase();
+      const name = String(s?.name || s?.serviceName || '').toLowerCase();
+      return cat.includes('water') || cat.includes('wash') || name.includes('wash');
+    }));
+  const isBodyShopDept = !isWaterWashDept && (activeDepartment === 'body-shop' || activeDepartment === 'bodyshop');
 
-  const resolvedDomainLabel = domainLabel || (isBodyShopDept ? 'Body Shop Additional Work' : 'Additional Work');
-  const resolvedSendButtonLabel = sendButtonLabel || (isBodyShopDept ? 'Approve Body Shop Work' : 'Approve Additional Work');
-  const resolvedBillLabel = additionalBillLabel || (isBodyShopDept ? 'Body Shop Additional Work' : 'Additional Work');
-  const resolvedSubtitle = subtitle || (isBodyShopDept ? 'Review vehicle details, current job card work, then approve one batch for body shop additional work.' : 'Review the vehicle, current job card, then send one approval batch for the extra work.');
-  const resolvedSuccessMessage = successMessage || (isBodyShopDept ? 'Body shop additional work approved successfully.' : 'Additional work approved successfully.');
-  const resolvedVehicleTitle = vehicleSectionTitle || (isBodyShopDept ? 'Body Shop Vehicle and Customer Details' : 'Vehicle and Customer Details');
-  const resolvedCurrentTitle = currentItemsTitle || (isBodyShopDept ? 'Current Body Shop Job Items' : 'Current Job Card Items');
-  const resolvedEmptyMessage = emptyMessage || (isBodyShopDept ? 'Open a body shop job card to create additional body work against that vehicle.' : 'Open a job card from the Job Cards action menu to create additional work against that vehicle.');
+  const resolvedDomainLabel = domainLabel || (
+    isWaterWashDept ? 'Water Wash Additional Work' :
+    isBodyShopDept ? 'Body Shop Additional Work' :
+    'Additional Work'
+  );
+  const resolvedSendButtonLabel = sendButtonLabel || (
+    isWaterWashDept ? 'Approve Water Wash Work' :
+    isBodyShopDept ? 'Approve Body Shop Work' :
+    'Approve Additional Work'
+  );
+  const resolvedBillLabel = additionalBillLabel || (
+    isWaterWashDept ? 'Water Wash Additional Work' :
+    isBodyShopDept ? 'Body Shop Additional Work' :
+    'Additional Work'
+  );
+  const resolvedSubtitle = subtitle || (
+    isWaterWashDept ? 'Review vehicle details, current job card work, then approve one batch for water wash additional work.' :
+    isBodyShopDept ? 'Review vehicle details, current job card work, then approve one batch for body shop additional work.' :
+    'Review the vehicle, current job card, then send one approval batch for the extra work.'
+  );
+  const resolvedSuccessMessage = successMessage || (
+    isWaterWashDept ? 'Water wash additional work approved successfully.' :
+    isBodyShopDept ? 'Body shop additional work approved successfully.' :
+    'Additional work approved successfully.'
+  );
+  const resolvedVehicleTitle = vehicleSectionTitle || (
+    isWaterWashDept ? 'Water Wash Vehicle and Customer Details' :
+    isBodyShopDept ? 'Body Shop Vehicle and Customer Details' :
+    'Vehicle and Customer Details'
+  );
+  const resolvedCurrentTitle = currentItemsTitle || (
+    isWaterWashDept ? 'Current Water Wash Job Items' :
+    isBodyShopDept ? 'Current Body Shop Job Items' :
+    'Current Job Card Items'
+  );
+  const resolvedEmptyMessage = emptyMessage || (
+    isWaterWashDept ? 'Open a water wash job card to create additional water wash work against that vehicle.' :
+    isBodyShopDept ? 'Open a body shop job card to create additional body work against that vehicle.' :
+    'Open a job card from the Job Cards action menu to create additional work against that vehicle.'
+  );
 
   const jobCardRaw = context?.jobCard || null;
   const jobCard = jobCardRaw || {
@@ -362,12 +421,34 @@ export function AdditionalWorkRequestScreen({
   const recorderRef = useRef(null);
 
   const currentServices = useMemo(() => serviceRows({ services: context?.currentServices || jobCard.services || [] }), [context?.currentServices, jobCard.services]);
-  const eligibleParentServices = useMemo(() => serviceRows({ services: context?.eligibleParentServices || [] }), [context?.eligibleParentServices]);
+  const eligibleParentServices = useMemo(() => {
+    const rows = serviceRows({ services: context?.eligibleParentServices || [] });
+    if (isWaterWashDept) {
+      const filtered = rows.filter((service) => {
+        const cat = String(service.category || '').toLowerCase();
+        const name = String(service.name || '').toLowerCase();
+        return cat.includes('water') || cat.includes('wash') || name.includes('wash');
+      });
+      return filtered.length > 0 ? filtered : rows;
+    }
+    return rows;
+  }, [context?.eligibleParentServices, isWaterWashDept]);
+
   const availableServices = useMemo(() => {
     const services = Array.isArray(context?.availableServices) ? context.availableServices : [];
     const currentServiceNames = new Set(currentServices.map((s) => s.name?.toLowerCase().trim()));
-    return services.filter((service) => !currentServiceNames.has(service.name?.toLowerCase().trim()));
-  }, [context?.availableServices, currentServices]);
+    let filtered = services.filter((service) => !currentServiceNames.has(service.name?.toLowerCase().trim()));
+
+    if (isWaterWashDept) {
+      filtered = filtered.filter((service) => {
+        const cat = String(service.category || service.categorySlug || service.categoryName || '').toLowerCase().trim();
+        const name = String(service.name || service.serviceName || '').toLowerCase().trim();
+        return cat.includes('water') || cat.includes('wash') || name.includes('wash');
+      });
+    }
+
+    return filtered;
+  }, [context?.availableServices, currentServices, isWaterWashDept]);
   const pendingApproval = context?.pendingApproval || null;
   const jobCardTaxRate = Number(jobCard.taxRate ?? jobCard.billing?.taxRate ?? TAX_RATE);
   const jobCardDiscountAmount = Number(jobCard.discountAmount ?? jobCard.billing?.discountAmount ?? 0);
@@ -425,7 +506,7 @@ export function AdditionalWorkRequestScreen({
       }
 
       const response = await createAdditionalWorkRequestApi(jobCardId, {
-        category: defaultCategory,
+        category: isWaterWashDept ? 'water-wash' : defaultCategory,
         parentJobCardServiceId: Number(parentJobCardServiceId),
         expectedDeliveryAt: expectedDelivery || undefined,
         mechanicExplanation: mechanicExplanation.trim(),
@@ -471,7 +552,7 @@ export function AdditionalWorkRequestScreen({
         subtitle={resolvedSubtitle}
         breadcrumbs={[{ label: resolvedDomainLabel, path: listRoute }, { label: jobCard.jobCardNo || jobCard.slug || jobCard.id }]}
         actions={
-          <Button variant="back" leftIcon={ArrowLeft} onClick={() => navigate(fromParam || backRoute)}>
+          <Button variant="back" leftIcon={ArrowLeft} onClick={() => navigate(fromParam || backRoute, { state: location.state })}>
             {fromParam ? 'Back to Edit Job Card' : 'Back to Job Cards'}
           </Button>
         }
@@ -562,7 +643,7 @@ export function AdditionalWorkRequestScreen({
                         </Grid>
                         <Grid item xs={7}>
                           <Typography variant="body2" fontWeight={600} sx={{ color: '#334155' }}>
-                            {activeDepartment === 'body-shop' ? 'Body Shop' : 'Mechanical'}
+                            {isWaterWashDept ? 'Water Wash' : (activeDepartment === 'body-shop' ? 'Body Shop' : 'Mechanical')}
                           </Typography>
                         </Grid>
                       </Grid>
@@ -731,7 +812,17 @@ export function AdditionalWorkRequestScreen({
                             <Typography variant="body2" fontWeight={800} sx={{ color: '#0F172A' }}>
                               {service.name}
                             </Typography>
-                            <Chip label={service.category} size="small" sx={{ height: 22, fontSize: '0.68rem', bgcolor: '#F1F5F9', color: '#0F172A', fontWeight: 700 }} />
+                            <Chip
+                              label={isWaterWashDept ? 'Water Wash' : (service.category || 'Mechanical')}
+                              size="small"
+                              sx={{
+                                height: 22,
+                                fontSize: '0.68rem',
+                                bgcolor: isWaterWashDept ? '#ECFEFF' : '#F1F5F9',
+                                color: isWaterWashDept ? '#0891B2' : '#0F172A',
+                                fontWeight: 700
+                              }}
+                            />
                           </Box>
                         }
                         sx={{ m: 0, flex: 1 }}
@@ -847,10 +938,13 @@ export function AdditionalWorkRequestScreen({
 export default function CreateRequest() {
   const [searchParams] = useSearchParams();
   const categoryParam = String(searchParams.get('category') || searchParams.get('department') || '').toLowerCase();
+  const isWaterWash = categoryParam.includes('water') || categoryParam.includes('wash');
+  const isBodyShop = !isWaterWash && categoryParam.includes('body');
 
   return (
     <AdditionalWorkRequestScreen
-      defaultCategory={categoryParam || 'mechanical'}
+      defaultCategory={isWaterWash ? 'water-wash' : (isBodyShop ? 'body-shop' : 'mechanical')}
+      domainLabel={isWaterWash ? 'Water Wash Additional Work' : undefined}
       listRoute={ROUTES.FLOOR_ADDITIONAL_WORK}
       backRoute={ROUTES.JOB_CARDS}
     />

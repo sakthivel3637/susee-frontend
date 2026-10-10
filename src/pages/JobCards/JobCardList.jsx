@@ -53,14 +53,16 @@ export default function JobCardList() {
     all:       '',   // no filter → returns every job card across all statuses
     mechanic:  'MECHANICAL_ASSIGNED,MECHANICAL_IN_PROGRESS',
     bodyshop:  'BODY_SHOP_ASSIGNED,BODY_SHOP_IN_PROGRESS',
+    waterwash: '',
     delivery:  'READY_FOR_DELIVERY,READY_FOR_DELIVERED',
   };
   // Mechanic & Body Shop tabs sort by most recently assigned; Delivery tab sorts by creation date; All tab sorts by createdAt
   const TAB_SORT_BY = {
-    all:      'createdAt',
-    mechanic: 'assignedAt',
-    bodyshop: 'assignedAt',
-    delivery: 'createdAt',
+    all:       'createdAt',
+    mechanic:  'assignedAt',
+    bodyshop:  'assignedAt',
+    waterwash: 'createdAt',
+    delivery:  'createdAt',
   };
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'all');
@@ -79,10 +81,13 @@ export default function JobCardList() {
   const { data: statusesData } = useJobCardStatuses();
   const jobCardStatuses = statusesData || [];
 
+  const effectiveDepartment = activeTab === 'waterwash' ? 'water-wash' : departmentFilter;
+
   const { data, isLoading } = useJobCards({
     search: debouncedSearch,
     status: tabStatusParam,
-    department: departmentFilter,
+    department: effectiveDepartment,
+    tab: activeTab === 'waterwash' ? 'waterwash' : undefined,
     page: page + 1,
     limit: rowsPerPage,
     fromDate,
@@ -223,6 +228,10 @@ export default function JobCardList() {
                 chipBg = '#fff7ed';
                 chipColor = '#c2410c';
                 chipBorder = '#ffedd5';
+              } else if (type === 'Water Wash') {
+                chipBg = '#ecfeff';
+                chipColor = '#0891b2';
+                chipBorder = '#a5f3fc';
               }
 
               return (
@@ -424,6 +433,18 @@ export default function JobCardList() {
             }
           />
           <Tab
+            value="waterwash"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+              Water Wash Work
+                {activeTab === 'waterwash' && (
+                  <Chip label={data?.meta?.total ?? 0} size="small"
+                    sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#0891b2', color: '#fff' }} />
+                )}
+              </Box>
+            }
+          />
+          <Tab
             value="delivery"
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
@@ -586,10 +607,12 @@ export default function JobCardList() {
             <MenuItem onClick={() => {
               handleMenuClose();
               const jobCardIdentifier = selectedJob?.slug || selectedJob?.jobCardNo || selectedJob?.id;
-              if (department === 'body-shop' || (!canCreateFloorAdditionalWork && canCreateBodyShopAdditionalWork)) {
-                navigate(`${ROUTES.BODY_SHOP_ADDITIONAL_WORK_NEW}?jobCardId=${encodeURIComponent(jobCardIdentifier)}`);
+              if (activeTab === 'waterwash' || department === 'water-wash') {
+                navigate(`${ROUTES.FLOOR_ADDITIONAL_WORK_NEW}?jobCardId=${encodeURIComponent(jobCardIdentifier)}&category=water-wash`);
+              } else if (activeTab === 'bodyshop' || department === 'body-shop' || (!canCreateFloorAdditionalWork && canCreateBodyShopAdditionalWork)) {
+                navigate(`${ROUTES.BODY_SHOP_ADDITIONAL_WORK_NEW}?jobCardId=${encodeURIComponent(jobCardIdentifier)}&category=body-shop`);
               } else {
-                navigate(`${ROUTES.FLOOR_ADDITIONAL_WORK_NEW}?jobCardId=${encodeURIComponent(jobCardIdentifier)}`);
+                navigate(`${ROUTES.FLOOR_ADDITIONAL_WORK_NEW}?jobCardId=${encodeURIComponent(jobCardIdentifier)}&category=mechanical`);
               }
             }}>
               <PlusCircle size={16} className="mr-3 text-body-shop" />

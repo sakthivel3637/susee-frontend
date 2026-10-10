@@ -61,6 +61,7 @@ export default function JobCardCreate() {
   const roleCategoryMap = {
     mechanical: 'Mechanical',
     'body-shop': 'Body Shop',
+    'water-wash': 'Water Wash',
   };
   const restrictedCategory = roleCategoryMap[moduleDepartment];
 
@@ -93,6 +94,16 @@ export default function JobCardCreate() {
     const fromQuery = (searchParams.get('from') || '').toLowerCase();
     const jcStatus = String(jobCard?.currentStatus?.statusCode || jobCard?.currentStatus?.code || '').toUpperCase();
     const jcCategory = String(jobCard?.serviceType || jobCard?.category || '').toLowerCase();
+
+    const stateTab = String(location.state?.activeTab || '').toLowerCase();
+    const isWaterWashProcess =
+      stateTab.includes('water') ||
+      categoryQuery.includes('water') ||
+      fromQuery.includes('water') ||
+      moduleDepartment === 'water-wash' ||
+      jcStatus.includes('WATER_WASH') ||
+      jcCategory.includes('water');
+    if (isWaterWashProcess) return 'waterwash';
 
     const isBodyShopProcess =
       categoryQuery.includes('body') ||
@@ -289,6 +300,7 @@ export default function JobCardCreate() {
     const normalized = normalizeDepartment(service?.category || service?.serviceItem?.category?.name || service?.serviceItem?.category?.slug);
     if (['mechanical', 'mechanic', 'mechnanic', 'floor'].includes(normalized)) return 'mechanical';
     if (['body-shop', 'bodyshop', 'paint', 'denting'].includes(normalized)) return 'body-shop';
+    if (['water-wash', 'water_wash', 'water wash', 'waterwash', 'washing', 'wash'].includes(normalized)) return 'water-wash';
     return '';
   };
 
@@ -339,6 +351,7 @@ export default function JobCardCreate() {
     if (roleDepartment === 'all') return !isSavedServiceCompleted(service);
 
     const serviceDepartment = getServiceDepartment(service);
+    if (serviceDepartment === 'water-wash') return !isSavedServiceCompleted(service);
     return Boolean(roleDepartment)
       && (roleDepartment === serviceDepartment || roleDepartment === 'all')
       && arePreviousDepartmentsCompleted(serviceDepartment)
@@ -350,6 +363,7 @@ export default function JobCardCreate() {
     const normalized = normalizeDepartment(category?.slug || category?.name);
     if (['mechanical', 'mechanic', 'mechnanic', 'floor'].includes(normalized)) return 'mechanical';
     if (['body-shop', 'bodyshop', 'paint', 'denting'].includes(normalized)) return 'body-shop';
+    if (['water-wash', 'water_wash', 'water wash', 'waterwash', 'washing', 'wash'].includes(normalized)) return 'water-wash';
     return '';
   };
 
@@ -366,12 +380,21 @@ export default function JobCardCreate() {
     const activeAssignmentCategory = activeAssignmentDetails.map(getAssignmentDepartment).find(Boolean);
     if (activeAssignmentCategory) return activeAssignmentCategory;
 
+    const uncompletedService = selectedServices.find(s => !isSavedServiceCompleted(s));
+    if (uncompletedService) {
+      const dept = getServiceDepartment(uncompletedService);
+      if (dept) return dept;
+    }
+
     const selectedServiceCategory = selectedServices.map(getServiceDepartment).find(Boolean);
     if (selectedServiceCategory) return selectedServiceCategory;
 
     if (moduleDepartment) return moduleDepartment;
     return 'mechanical';
-  }, [activeAssignmentDetails, selectedServices, moduleDepartment, menus]);
+  }, [activeAssignmentDetails, selectedServices, moduleDepartment, menus, isSavedServiceCompleted]);
+
+  const isWaterWashContext = assignmentCategory === 'water-wash' ||
+    (selectedServices.length > 0 && selectedServices.every(s => getServiceDepartment(s) === 'water-wash' || isSavedServiceCompleted(s)) && selectedServices.some(s => getServiceDepartment(s) === 'water-wash' && !isSavedServiceCompleted(s)));
 
   const canReassignExistingWork = activeAssignmentDetails.some((assignment) => getAssignmentDepartment(assignment) === assignmentCategory);
   const assigneeLabel = assignmentCategory === 'body-shop' ? 'Technician' : 'Mechanic';
@@ -585,11 +608,13 @@ export default function JobCardCreate() {
 
     if (isProgressingStatus) {
       const serviceDept = getServiceDepartment(service);
-      const hasAnyAssignment = assignmentDetails.some(a => getAssignmentDepartment(a) === serviceDept);
+      if (serviceDept !== 'water-wash') {
+        const hasAnyAssignment = assignmentDetails.some(a => getAssignmentDepartment(a) === serviceDept);
 
-      if (!hasAnyAssignment) {
-        toastError(`Please assign a mechanic and bay for ${serviceDept || 'this department'} services first.`);
-        return;
+        if (!hasAnyAssignment) {
+          toastError(`Please assign a mechanic and bay for ${serviceDept || 'this department'} services first.`);
+          return;
+        }
       }
     }
 
@@ -820,7 +845,7 @@ export default function JobCardCreate() {
                           </Grid>
                         </Box>
 
-                        {!hasReadableModule(menus, ['manager', 'managing-director']) && (
+                        {!hasReadableModule(menus, ['manager', 'managing-director']) && !isWaterWashContext && (
                           <Box sx={{ mt: 2.5 }}>
                             <Button
                               type="button"
@@ -897,14 +922,24 @@ export default function JobCardCreate() {
                         const stateTab = String(location.state?.activeTab || location.state?.department || location.state?.category || '').toLowerCase();
                         const jcStatus = String(jobCard?.currentStatus?.statusCode || jobCard?.currentStatus?.code || '').toUpperCase();
                         const jcCategory = String(jobCard?.serviceType || jobCard?.category || '').toLowerCase();
+                        const isWaterWashProcess =
+                          stateTab.includes('water') ||
+                          categoryQuery.includes('water') ||
+                          fromQuery.includes('water') ||
+                          moduleDepartment === 'water-wash' ||
+                          jcStatus.includes('WATER_WASH') ||
+                          jcCategory.includes('water') ||
+                          (Array.isArray(selectedServices) && selectedServices.some(s => getServiceDepartment(s) === 'water-wash' && !isSavedServiceCompleted(s)));
                         const isBodyShopProcess =
-                          stateTab.includes('body') ||
-                          categoryQuery.includes('body') ||
-                          fromQuery.includes('body') ||
-                          moduleDepartment === 'body-shop' ||
-                          jcStatus.includes('BODY_SHOP') ||
-                          jcCategory.includes('body');
-                        const categoryParam = isBodyShopProcess ? 'body-shop' : 'mechanical';
+                          !isWaterWashProcess && (
+                            stateTab.includes('body') ||
+                            categoryQuery.includes('body') ||
+                            fromQuery.includes('body') ||
+                            moduleDepartment === 'body-shop' ||
+                            jcStatus.includes('BODY_SHOP') ||
+                            jcCategory.includes('body')
+                          );
+                        const categoryParam = isWaterWashProcess ? 'water-wash' : (isBodyShopProcess ? 'body-shop' : 'mechanical');
                         const jobCardIdParam = encodeURIComponent(jobCard?.slug || jobCard?.jobCardNo || jobCardIdentifier);
                         const targetRoute = isBodyShopProcess ? ROUTES.BODY_SHOP_ADDITIONAL_WORK_NEW : ROUTES.FLOOR_ADDITIONAL_WORK_NEW;
                         const fromEditPath = encodeURIComponent(location.pathname + location.search);

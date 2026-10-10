@@ -187,7 +187,9 @@ export default function JobCardDetailPage() {
         status: s.serviceStatus?.statusCode || 'PENDING',
         isAdditional: !!s.isAdditional,
         category: s.category || s.serviceItem?.category,
-        categorySlug: s.categorySlug || s.category?.slug || s.serviceItem?.category?.slug
+        categorySlug: s.categorySlug || s.category?.slug || s.serviceItem?.category?.slug,
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt
       })) || [])
   };
 
@@ -276,7 +278,24 @@ export default function JobCardDetailPage() {
   const assignedMechanicName = activeAssignment.assignedUser?.fullName || firstAssignment.assignedUser?.fullName || jobCard.technician || jobCard.assignedMechanic?.fullName || 'Unassigned';
   const assignedBayName = activeAssignment.bay?.bayName || activeAssignment.bay?.bayCode || activeAssignment.bay?.name || firstAssignment.bay?.bayName || firstAssignment.bay?.bayCode || firstAssignment.bay?.name || jobCard.bay?.bayName || jobCard.bay?.name || jobCard.assignedBay?.bayName || jobCard.assignedBay?.name || '—';
 
+  const isServiceWaterWash = (s) => {
+    const cat = String(s.categorySlug || s.category?.slug || s.serviceItem?.category?.slug || s.category || s.serviceItem?.category?.name || '').toLowerCase();
+    if (cat && (cat.includes('water') || cat.includes('wash'))) return true;
+    const name = String(s.name || '').toLowerCase();
+    return name.includes('water') || name.includes('wash');
+  };
+
+  const isAssignmentWaterWash = (a) => {
+    const cat = String(a.jobCardService?.serviceItem?.category?.slug || a.service?.category?.slug || a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
+    if (cat && (cat.includes('water') || cat.includes('wash'))) return true;
+    const bayType = String(a.bay?.bayType || '').toLowerCase();
+    if (bayType.includes('water') || bayType.includes('wash')) return true;
+    const name = String(a.service?.serviceName || a.jobCardService?.serviceName || '').toLowerCase();
+    return name.includes('water') || name.includes('wash');
+  };
+
   const isServiceBodyshop = (s) => {
+    if (isServiceWaterWash(s)) return false;
     const cat = String(s.categorySlug || s.category?.slug || s.serviceItem?.category?.slug || s.category || s.serviceItem?.category?.name || '').toLowerCase();
     if (cat && (cat.includes('body') || cat.includes('mechanic'))) {
       return cat.includes('body');
@@ -286,6 +305,7 @@ export default function JobCardDetailPage() {
   };
 
   const isAssignmentBodyshop = (a) => {
+    if (isAssignmentWaterWash(a)) return false;
     const cat = String(a.jobCardService?.serviceItem?.category?.slug || a.service?.category?.slug || a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
     if (cat && (cat.includes('body') || cat.includes('mechanic'))) {
       return cat.includes('body');
@@ -293,12 +313,16 @@ export default function JobCardDetailPage() {
     return cat.includes('body') || cat.includes('denting') || cat.includes('paint');
   };
 
+  const isServiceMechanical = (s) => !isServiceBodyshop(s) && !isServiceWaterWash(s);
+  const isAssignmentMechanical = (a) => !isAssignmentBodyshop(a) && !isAssignmentWaterWash(a);
+
   const computeServiceWorkStatus = () => {
     const services = displayJobCard.services || [];
     const assignments = jobCard?.workAssignments || [];
 
     const hasBodyshop = services.some(isServiceBodyshop) || assignments.some(isAssignmentBodyshop);
-    const hasMechanical = services.some(s => !isServiceBodyshop(s)) || assignments.some(a => !isAssignmentBodyshop(a));
+    const hasWaterWash = services.some(isServiceWaterWash) || assignments.some(isAssignmentWaterWash);
+    const hasMechanical = services.some(isServiceMechanical) || assignments.some(isAssignmentMechanical);
 
     const isAllCompleted = services.length > 0 && services.every(s => {
       const st = String(s.status || s.serviceStatus?.statusCode || s.serviceStatus?.code || '').toUpperCase();
@@ -306,15 +330,19 @@ export default function JobCardDetailPage() {
     });
 
     if (isAllCompleted) {
-      if (hasMechanical && hasBodyshop) return 'Completed (Mechanical & Body Shop)';
-      if (hasBodyshop) return 'Completed (Body Shop)';
-      if (hasMechanical) return 'Completed (Mechanical)';
+      const parts = [];
+      if (hasMechanical) parts.push('Mechanical');
+      if (hasBodyshop) parts.push('Body Shop');
+      if (hasWaterWash) parts.push('Water Wash');
+      if (parts.length > 0) return `Completed (${parts.join(' & ')})`;
       return 'Completed';
     }
 
-    if (hasMechanical && hasBodyshop) return 'Mechanical & Body Shop';
-    if (hasBodyshop) return 'Body Shop Work';
-    if (hasMechanical) return 'Mechanical Work';
+    const parts = [];
+    if (hasMechanical) parts.push('Mechanical');
+    if (hasBodyshop) parts.push('Body Shop');
+    if (hasWaterWash) parts.push('Water Wash');
+    if (parts.length > 0) return parts.join(' & ');
     return displayJobCard.serviceType || 'Regular Service';
   };
 
@@ -322,20 +350,28 @@ export default function JobCardDetailPage() {
   const assignments = jobCard?.workAssignments || [];
 
   const hasBodyshopWork = services.some(isServiceBodyshop) || assignments.some(isAssignmentBodyshop);
-  const hasMechanicalWork = services.some(s => !isServiceBodyshop(s)) || assignments.some(a => !isAssignmentBodyshop(a));
+  const hasMechanicalWork = services.some(isServiceMechanical) || assignments.some(isAssignmentMechanical);
+  const hasWaterWashWork = services.some(isServiceWaterWash) || assignments.some(isAssignmentWaterWash);
 
-  const mechanicalAssignments = assignments.filter(a => !isAssignmentBodyshop(a));
+  const mechanicalAssignments = assignments.filter(isAssignmentMechanical);
   const isMechanicalDone = hasMechanicalWork && (
     mechanicalAssignments.length > 0
       ? mechanicalAssignments.every(a => !!a.completedAt || getAssignmentStatusValue(a) === 'COMPLETED')
-      : services.filter(s => !isServiceBodyshop(s)).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
+      : services.filter(isServiceMechanical).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
   );
 
-  const bodyshopAssignments = assignments.filter(a => isAssignmentBodyshop(a));
+  const bodyshopAssignments = assignments.filter(isAssignmentBodyshop);
   const isBodyshopDone = hasBodyshopWork && (
     bodyshopAssignments.length > 0
       ? bodyshopAssignments.every(a => !!a.completedAt || getAssignmentStatusValue(a) === 'COMPLETED')
-      : services.filter(s => isServiceBodyshop(s)).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
+      : services.filter(isServiceBodyshop).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
+  );
+
+  const waterWashAssignments = assignments.filter(isAssignmentWaterWash);
+  const isWaterWashDone = hasWaterWashWork && (
+    waterWashAssignments.length > 0
+      ? waterWashAssignments.every(a => !!a.completedAt || getAssignmentStatusValue(a) === 'COMPLETED')
+      : services.filter(isServiceWaterWash).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
   );
 
   const pendingApprovalsCount = (jobCard?.approvals || []).filter(a => {
@@ -364,6 +400,18 @@ export default function JobCardDetailPage() {
     return st === 'IN_PROGRESS' || st === 'ASSIGNED';
   });
 
+  const hasPartiallyCompletedWash = services.filter(isServiceWaterWash).some(s => s.status === 'COMPLETED');
+
+  const isWaterWashCurrentlyWorking = waterWashAssignments.some(a => a.startedAt || getAssignmentStatusValue(a) === 'IN_PROGRESS') ||
+    services.filter(isServiceWaterWash).some(s => s.status === 'IN_PROGRESS');
+
+  const isWaterWashActive = waterWashAssignments.some(a => {
+    const st = getAssignmentStatusValue(a);
+    return st === 'IN_PROGRESS' || st === 'ASSIGNED';
+  }) || isWaterWashCurrentlyWorking || (hasPartiallyCompletedWash && !isWaterWashDone);
+
+  const arePreviousStagesDone = (!hasMechanicalWork || isMechanicalDone) && (!hasBodyshopWork || isBodyshopDone);
+
   const mechanicalState = !hasMechanicalWork
     ? 'completed'
     : (isMechanicalDone ? 'completed' : (isMechanicalActive ? 'active' : (mechanicalAssignments.length === 0 ? 'in_progress' : 'pending')));
@@ -372,9 +420,17 @@ export default function JobCardDetailPage() {
     ? 'completed'
     : (isBodyshopDone ? 'completed' : (isBodyshopActive ? 'active' : (bodyshopAssignments.length === 0 ? 'in_progress' : 'pending')));
 
+  const waterWashState = !hasWaterWashWork
+    ? 'completed'
+    : (isWaterWashDone
+      ? 'completed'
+      : (isWaterWashActive
+        ? 'active'
+        : (arePreviousStagesDone ? 'in_progress' : 'pending')));
+
   const deliveryState = isJobDelivered
     ? 'completed'
-    : ((!hasMechanicalWork || isMechanicalDone) && (!hasBodyshopWork || isBodyshopDone) && pendingApprovalsCount === 0 ? 'active' : 'pending');
+    : (arePreviousStagesDone && (!hasWaterWashWork || isWaterWashDone) && pendingApprovalsCount === 0 ? 'active' : 'pending');
 
   const activeMech = mechanicalAssignments.find(a => !a.completedAt) || mechanicalAssignments[0] || {};
   const mechName = activeMech.assignedUser?.fullName || jobCard.technician || jobCard.assignedMechanic?.fullName || 'Unassigned';
@@ -384,8 +440,13 @@ export default function JobCardDetailPage() {
   const bodyName = activeBody.assignedUser?.fullName || 'Unassigned';
   const bodyBay = activeBody.bay?.bayName || activeBody.bay?.bayCode || activeBody.bay?.name || '—';
 
-  const isMechanicalPostponed = services.filter(s => !isServiceBodyshop(s)).some(s => s.status === 'POSTPONED');
-  const isBodyshopPostponed = services.filter(s => isServiceBodyshop(s)).some(s => s.status === 'POSTPONED');
+  const activeWash = waterWashAssignments.find(a => !a.completedAt) || waterWashAssignments[0] || {};
+  const washName = activeWash.assignedUser?.fullName || 'Unassigned';
+  const washBay = activeWash.bay?.bayName || activeWash.bay?.bayCode || activeWash.bay?.name || '—';
+
+  const isMechanicalPostponed = services.filter(isServiceMechanical).some(s => s.status === 'POSTPONED');
+  const isBodyshopPostponed = services.filter(isServiceBodyshop).some(s => s.status === 'POSTPONED');
+  const isWaterWashPostponed = services.filter(isServiceWaterWash).some(s => s.status === 'POSTPONED');
   const isMechanicCurrentlyWorking = mechanicalAssignments.some(a => a.startedAt || getAssignmentStatusValue(a) === 'IN_PROGRESS');
   const isBodyshopCurrentlyWorking = bodyshopAssignments.some(a => a.startedAt || getAssignmentStatusValue(a) === 'IN_PROGRESS');
 
@@ -441,6 +502,26 @@ export default function JobCardDetailPage() {
                 : `Assigned to ${bodyName}${bodyBay !== '—' ? ` · ${bodyBay}` : ''}`)
               : 'Pending Body Shop Work'))),
       state: bodyshopState
+    },
+    {
+      id: 'waterwash',
+      title: 'Water Wash',
+      subtitle: !hasWaterWashWork
+        ? 'N/A (No Water Wash Services)'
+        : (isWaterWashDone
+          ? 'Water Wash Completed'
+          : (isWaterWashPostponed
+            ? 'Postponed'
+            : (isWaterWashCurrentlyWorking
+              ? (waterWashAssignments.length > 0 && washName !== 'Unassigned'
+                ? `In Progress by ${washName}`
+                : 'Water Wash In Progress')
+              : (hasPartiallyCompletedWash
+                ? 'Water Wash In Progress'
+                : (waterWashAssignments.length > 0 && washName !== 'Unassigned'
+                  ? `Assigned to ${washName}${washBay !== '—' ? ` · ${washBay}` : ''}`
+                  : (arePreviousStagesDone ? 'Pending Water Wash' : 'Pending Previous Stages')))))),
+      state: waterWashState
     },
     {
       id: 'delivery',
@@ -552,11 +633,24 @@ export default function JobCardDetailPage() {
     return category.includes('body') || category.includes('paint') || category.includes('denting');
   };
 
+  const isWaterWashCategory = (category) => {
+    return category && (category.includes('water') || category.includes('wash'));
+  };
+
   const trackerMechAssignments = trackerAssignments.filter(
-    assignment => !isBodyShopCategory(getAssignmentCategory(assignment))
+    assignment => {
+      const cat = getAssignmentCategory(assignment);
+      return !isBodyShopCategory(cat) && !isWaterWashCategory(cat);
+    }
   );
   const trackerBodyshopAssignments = trackerAssignments.filter(
-    assignment => isBodyShopCategory(getAssignmentCategory(assignment))
+    assignment => {
+      const cat = getAssignmentCategory(assignment);
+      return isBodyShopCategory(cat) && !isWaterWashCategory(cat);
+    }
+  );
+  const trackerWaterWashAssignments = trackerAssignments.filter(
+    assignment => isWaterWashCategory(getAssignmentCategory(assignment))
   );
   const getApprovalInterval = (approval) => {
     const status = String(approval.statusCode || approval.customerResponse || '').toUpperCase();
@@ -569,7 +663,7 @@ export default function JobCardDetailPage() {
       String(service.categorySlug || service.categoryName || '').toLowerCase()
     );
     return [...new Set(categories.map(category =>
-      isBodyShopCategory(category) ? 'body-shop' : 'mechanical'
+      isWaterWashCategory(category) ? 'water-wash' : (isBodyShopCategory(category) ? 'body-shop' : 'mechanical')
     ))];
   };
   const getDepartmentApprovalIntervals = (department) => trackerApprovals
@@ -607,6 +701,37 @@ export default function JobCardDetailPage() {
     ...getAssignmentIntervals(trackerBodyshopAssignments),
     ...getDepartmentApprovalIntervals('body-shop')
   ]);
+
+  const waterWashAssignedAt = getEarliestTimestamp(trackerWaterWashAssignments.map(a => a.assignedAt));
+  const waterWashStartedAt = getEarliestTimestamp([
+    ...trackerWaterWashAssignments.map(a => a.startedAt),
+    ...services.filter(isServiceWaterWash).filter(s => s.status === 'IN_PROGRESS' || s.status === 'COMPLETED').map(s => s.updatedAt || s.createdAt),
+    ...(jobCard?.services || []).filter(isServiceWaterWash).filter(s => {
+      const code = String(s.serviceStatus?.statusCode || s.status || '').toUpperCase();
+      return code === 'IN_PROGRESS' || code === 'COMPLETED';
+    }).map(s => s.updatedAt || s.createdAt)
+  ]);
+  const waterWashStartFormatted = waterWashStartedAt ? formatTrackerDateTime(waterWashStartedAt) : 'Not started';
+
+  const completedWashServices = services.filter(isServiceWaterWash).filter(s => s.status === 'COMPLETED');
+  const allInitialWashCompleted = services.filter(isServiceWaterWash).filter(s => !s.isAdditional).every(s => s.status === 'COMPLETED' || s.status === 'REJECTED');
+  const waterWashCompAt = (trackerWaterWashAssignments.length > 0 && trackerWaterWashAssignments.every(a => !!a.completedAt)) ||
+    (completedWashServices.length > 0 && allInitialWashCompleted)
+    ? getLatestTimestamp([
+      ...trackerWaterWashAssignments.map(a => a.completedAt),
+      ...completedWashServices.map(s => s.updatedAt),
+      ...(jobCard?.services || []).filter(isServiceWaterWash).filter(s => String(s.serviceStatus?.statusCode || s.status || '').toUpperCase() === 'COMPLETED').map(s => s.updatedAt)
+    ])
+    : null;
+  const waterWashIntervals = [
+    ...getAssignmentIntervals(trackerWaterWashAssignments),
+    ...getDepartmentApprovalIntervals('water-wash')
+  ];
+  if (waterWashIntervals.length === 0 && waterWashStartedAt) {
+    const washInterval = getTimeInterval(waterWashStartedAt, waterWashCompAt);
+    if (washInterval) waterWashIntervals.push(washInterval);
+  }
+  const timeInWaterWashFormatted = getMergedDurationText(waterWashIntervals);
 
   const addlAssignments = trackerAssignments.filter(
     assignment => assignment.jobCardService?.isAdditional || assignment.service?.isAdditional
@@ -1339,6 +1464,30 @@ export default function JobCardDetailPage() {
                         <Box sx={{ textAlign: 'right' }}>
                           <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInBodyshopFormatted}</Typography>
                           {bodyshopCompAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>ended {formatTrackerDateTime(bodyshopCompAt)}</Typography>}
+                        </Box>
+                      </Box>
+                    </>
+                  )}
+
+                  {hasWaterWashWork && (
+                    <>
+                      {trackerWaterWashAssignments.length > 0 && (
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Water Wash assigned</Typography>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{waterWashAssignedAt ? formatTrackerDateTime(waterWashAssignedAt) : '—'}</Typography>
+                        </Box>
+                      )}
+
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Water Wash started</Typography>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: '#0f172a', fontFamily: 'monospace, sans-serif', textAlign: 'right' }}>{waterWashStartFormatted}</Typography>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: '1px solid #f8fafc' }}>
+                        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Time in Water Wash (elapsed)</Typography>
+                        <Box sx={{ textAlign: 'right' }}>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#d97706', fontFamily: 'monospace, sans-serif' }}>{timeInWaterWashFormatted}</Typography>
+                          {waterWashCompAt && <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>ended {formatTrackerDateTime(waterWashCompAt)}</Typography>}
                         </Box>
                       </Box>
                     </>

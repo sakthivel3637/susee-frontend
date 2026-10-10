@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { User, Printer, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { User, Printer, Clock, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Card, Chip, TextField } from '@mui/material';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
@@ -11,12 +12,13 @@ import { toastSuccess, toastInfo, toastError } from '../../notifications/toast';
 import { formatDateTime, formatWaitTime } from '../../utils/formatters';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import useAuthStore from '../../store/useAuthStore';
-import { getMechanicalQueueApi, getBodyShopQueueApi, assignQueueWorkApi } from '../../api/queueApi';
+import { getMechanicalQueueApi, getBodyShopQueueApi, getWaterWashQueueApi, startWaterWashApi, completeWaterWashApi, assignQueueWorkApi } from '../../api/queueApi';
 import { skipJobCardDepartmentApi } from '../../api/jobCardApi';
 import { getMechanicsDropdownApi } from '../../api/userApi';
 import { adminBayApi } from '../../api/adminBayApi';
 import { getDepartmentFromModules } from '../../utils/authAccess';
 import { usePermissions } from '../../hooks/usePermissions';
+import { ROUTES } from '../../config/routes';
 
 
 
@@ -27,6 +29,7 @@ const BAY_TYPE_BY_CATEGORY = {
 };
 
 export default function AssignMechanicList() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { role, user, menus } = useAuthStore();
   const locationId = user?.locationId || user?.location_id || user?.branchId || '';
@@ -52,6 +55,8 @@ export default function AssignMechanicList() {
       const params = { locationId, page: page + 1, limit: rowsPerPage, search };
       if (queueCategory === 'body-shop') {
         return getBodyShopQueueApi(params);
+      } else if (queueCategory === 'water-wash') {
+        return getWaterWashQueueApi(params);
       } else {
         return getMechanicalQueueApi(params);
       }
@@ -105,6 +110,26 @@ export default function AssignMechanicList() {
       }
     },
     onError: (error) => toastError(error?.response?.data?.message || error?.message || 'Failed to skip department')
+  });
+
+  const startWaterWashMutation = useMutation({
+    mutationFn: (jobCardId) => startWaterWashApi(jobCardId),
+    onSuccess: async () => {
+      toastSuccess('Water wash started successfully');
+      await queryClient.invalidateQueries({ queryKey: ['assign-mechanic-queue'] });
+      await queryClient.invalidateQueries({ queryKey: ['job-cards'] });
+    },
+    onError: (error) => toastError(error?.response?.data?.message || error?.message || 'Failed to start water wash')
+  });
+
+  const completeWaterWashMutation = useMutation({
+    mutationFn: (jobCardId) => completeWaterWashApi(jobCardId),
+    onSuccess: async () => {
+      toastSuccess('Water wash completed successfully');
+      await queryClient.invalidateQueries({ queryKey: ['assign-mechanic-queue'] });
+      await queryClient.invalidateQueries({ queryKey: ['job-cards'] });
+    },
+    onError: (error) => toastError(error?.response?.data?.message || error?.message || 'Failed to complete water wash')
   });
 
   const [assignModal, setAssignModal] = useState({ isOpen: false, item: null });
@@ -220,9 +245,16 @@ export default function AssignMechanicList() {
     ...(canAssignWork ? [{
       header: 'ACTION',
       render: (row) => {
-        const canSkip = row.canSkip ?? (queueCategory !== 'water-wash');
+        const isWaterWash = queueCategory === 'water-wash';
+        const canSkip = !isWaterWash && (row.canSkip ?? false);
+        const isWashInProgress = isWaterWash && Boolean(
+          row.isWaterWashInProgress ||
+          String(row.currentStatus?.code || row.currentStatus?.statusCode || '').toUpperCase() === 'WATER_WASH_IN_PROGRESS' ||
+          (Array.isArray(row.services) && row.services.some(s => String(s.serviceStatus?.statusCode || s.status?.code || '').toUpperCase() === 'IN_PROGRESS'))
+        );
+
         return (
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {canSkip && (
               <Button
                 variant="outline"
@@ -243,21 +275,78 @@ export default function AssignMechanicList() {
                 Skip Dept
               </Button>
             )}
-            <Button
-              variant="primary"
-              size="sm"
-              rightIcon={ArrowRight}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAssignClick(row);
-              }}
-              sx={{
-                fontWeight: 600,
-                textTransform: 'none',
-              }}
-            >
-              Assign
-            </Button>
+            {isWaterWash ? (
+              isWashInProgress ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip
+                    label="In Progress"
+                    size="small"
+                    sx={{
+                      bgcolor: '#eff6ff',
+                      color: '#2563eb',
+                      border: '1px solid #bfdbfe',
+                      fontWeight: 700,
+                      borderRadius: '9999px'
+                    }}
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    rightIcon={CheckCircle2}
+                    isLoading={completeWaterWashMutation.isPending}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const jobCardId = row.jobCardId || row.id;
+                      completeWaterWashMutation.mutate(jobCardId);
+                    }}
+                    sx={{
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      bgcolor: '#059669',
+                      '&:hover': { bgcolor: '#047857' }
+                    }}
+                  >
+                    Complete Wash
+                  </Button>
+                </Box>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  rightIcon={ArrowRight}
+                  isLoading={startWaterWashMutation.isPending}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const jobCardId = row.jobCardId || row.id;
+                    startWaterWashMutation.mutate(jobCardId);
+                  }}
+                  sx={{
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    bgcolor: '#059669',
+                    '&:hover': { bgcolor: '#047857' }
+                  }}
+                >
+                  Start Wash
+                </Button>
+              )
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                rightIcon={ArrowRight}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAssignClick(row);
+                }}
+                sx={{
+                  fontWeight: 600,
+                  textTransform: 'none',
+                }}
+              >
+                Assign
+              </Button>
+            )}
           </Box>
         );
       },
@@ -310,6 +399,7 @@ export default function AssignMechanicList() {
           {[
             { key: 'mechanical', label: 'Mechanical' },
             { key: 'body-shop', label: 'Body Shop' },
+            { key: 'water-wash', label: 'Water Wash' },
           ].map((tab) => (
             <Button
               key={tab.key}
