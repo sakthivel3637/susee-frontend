@@ -138,7 +138,30 @@ export default function NotificationPopup() {
         jobCardSlug: notif.jobCardSlug || null,
         notifId: notif.id || null,
         statusCode: notif.statusCode || null,
+        processStageTrackingId: notif.processStageTrackingId || null
       }]);
+    };
+
+    const handleStageCompleted = (data) => {
+      if (!data) return;
+      setQueue((prev) => prev.filter((item) => {
+        if (data.jobCardId && item.jobCardId === data.jobCardId) return false;
+        if (data.gateEntryId && item.gateEntryId === data.gateEntryId) return false;
+        return true;
+      }));
+
+      setCurrent((curr) => {
+        if (!curr) return null;
+        if (data.jobCardId && curr.jobCardId === data.jobCardId) {
+          setOpen(false);
+          return null;
+        }
+        if (data.gateEntryId && curr.gateEntryId === data.gateEntryId) {
+          setOpen(false);
+          return null;
+        }
+        return curr;
+      });
     };
 
     const handleNotificationRead = (data) => {
@@ -170,12 +193,16 @@ export default function NotificationPopup() {
     };
 
     socket.on("notification-created", handleNotification);
+    socket.on("notification-repeat-popup", handleNotification);
+    socket.on("stage-completed", handleStageCompleted);
     socket.on("notification-read", handleNotificationRead);
     socket.on("notification-read-all", handleNotificationReadAll);
 
     return () => {
       socket.off("connect", joinRoom);
       socket.off("notification-created", handleNotification);
+      socket.off("notification-repeat-popup", handleNotification);
+      socket.off("stage-completed", handleStageCompleted);
       socket.off("notification-read", handleNotificationRead);
       socket.off("notification-read-all", handleNotificationReadAll);
     };

@@ -45,6 +45,14 @@ const baseSchema = z.object({
       .min(1, 'Value must be greater than or equal to 1.')
       .max(2147483647, 'Alert Interval Time cannot exceed 2147483647')
   ),
+  repeatIntervalMinutes: z.preprocess(
+    (value) => (value === '' || value === null || value === undefined ? null : Number(value)),
+    z.number({ invalid_type_error: 'Repeat Alert Interval must be a valid number' })
+      .int('Repeat Alert Interval must be a valid number')
+      .min(1, 'Value must be greater than or equal to 1.')
+      .max(2147483647, 'Repeat Alert Interval cannot exceed 2147483647')
+      .nullable()
+  ),
   isActive: z.boolean()
 });
 
@@ -66,6 +74,7 @@ const defaultValues = {
   statusId: '',
   stageCode: '',
   allowedMinutes: '',
+  repeatIntervalMinutes: '',
   notifyBy: 'ROLE',
   notifyRoleIds: [],
   notifyUserIds: [],
@@ -157,6 +166,7 @@ export default function StageScheduleForm() {
             statusId: schedule.statusId,
             stageCode: schedule.stageCode || '',
             allowedMinutes: schedule.allowedMinutes,
+            repeatIntervalMinutes: schedule.repeatIntervalMinutes || '',
             notifyBy: schedule.notifyUserIds?.length > 0 && !schedule.notifyRoleIds?.length ? 'USER' : 'ROLE',
             notifyRoleIds: schedule.notifyRoleIds || [],
             notifyUserIds: schedule.notifyUserIds || [],
@@ -223,6 +233,7 @@ export default function StageScheduleForm() {
       statusId: data.statusId,
       stageCode: data.stageCode,
       allowedMinutes: data.allowedMinutes,
+      repeatIntervalMinutes: data.repeatIntervalMinutes ? Number(data.repeatIntervalMinutes) : null,
       notifyRoleIds: data.notifyBy === 'ROLE' ? data.notifyRoleIds : [],
       notifyUserIds: data.notifyBy === 'USER' ? data.notifyUserIds : [],
       isActive: data.isActive
@@ -297,10 +308,20 @@ export default function StageScheduleForm() {
             <Grid item xs={12} md={6}>
               <RHFTextField
                 name="allowedMinutes"
-                label="Alert Interval Time"
+                label="Initial SLA Time Limit (Minutes)"
                 type="number"
-                placeholder="e.g. 20"
+                placeholder="e.g. 15 (First alert after 15 mins)"
                 required
+                inputProps={{ min: 1, step: 1 }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <RHFTextField
+                name="repeatIntervalMinutes"
+                label="Repeat Alert Interval (Minutes)"
+                type="number"
+                placeholder="e.g. 5 (Repeat popup every 5 mins)"
                 inputProps={{ min: 1, step: 1 }}
               />
             </Grid>

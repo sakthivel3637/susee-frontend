@@ -194,7 +194,8 @@ export default function JobCardCreate() {
           quantity: service.quantity || 1,
           category: service.serviceItem?.category?.name || firstCategory || 'Mechanical',
           serviceStatusId: service.serviceStatusId || service.serviceStatus?.id || '',
-          serviceStatusCode: service.serviceStatus?.statusCode || service.serviceStatus?.code || ''
+          serviceStatusCode: service.serviceStatus?.statusCode || service.serviceStatus?.code || '',
+          isAdditional: Boolean(service.isAdditional)
         }));
         setSelectedServices(mappedServices);
         setValue('services', mappedServices.map(s => s.serviceItemId || s.id));
@@ -209,7 +210,15 @@ export default function JobCardCreate() {
       } else if (jobCard.services && masterServices.length > 0) {
         const mappedServices = masterServices.filter(s =>
           jobCard.services.includes(s.name) || jobCard.services.includes(s.id)
-        );
+        ).map(s => {
+          const matchedService = (jobCard.services || []).find(
+            js => typeof js === 'object' && (js.serviceItemId === s.id || js.id === s.id || js.serviceName === s.name || js.name === s.name)
+          );
+          return {
+            ...s,
+            isAdditional: Boolean(matchedService?.isAdditional)
+          };
+        });
         setSelectedServices(mappedServices);
         setValue('services', mappedServices.map(s => s.id));
       }
@@ -944,43 +953,116 @@ export default function JobCardCreate() {
                         <Typography variant="body2" color="text.secondary">No services added for this job card.</Typography>
                       </Box>
                     ) : (
-                      selectedServices.map((service) => (
-                        <Box
-                          key={service.jobCardServiceId || service.serviceItemId || service.id}
-                          sx={{
-                            display: 'grid',
-                            gridTemplateColumns: { xs: '1fr', md: '1.7fr 0.8fr 0.8fr 1.2fr' },
-                            gap: 2,
-                            alignItems: 'center',
-                            px: 2,
-                            py: 1.5,
-                            borderTop: '1px solid',
-                            borderColor: 'divider'
-                          }}
-                        >
-                          <Box>
-                            <Typography variant="body2" fontWeight={700}>{service.name}</Typography>
-                            <Typography variant="caption" color="text.secondary">{service.category}</Typography>
-                          </Box>
-                          <Typography variant="body2" color="text.secondary">
-                            {service.estimateMinutes ? `${service.estimateMinutes} min` : '-'}
-                          </Typography>
-                          <Typography variant="body2" fontWeight={700}>{formatCurrency(service.price)}</Typography>
-                          <TextField
-                            select
-                            fullWidth
-                            size="small"
-                            value={serviceStatusValues[service.jobCardServiceId] || ''}
-                            onChange={(event) => handleServiceStatusChange(service, event.target.value)}
-                            disabled={!canEditServiceStatus(service)}
+                      <>
+                        {/* Regular Services */}
+                        {selectedServices.filter(s => !s.isAdditional).map((service) => (
+                          <Box
+                            key={service.jobCardServiceId || service.serviceItemId || service.id}
+                            sx={{
+                              display: 'grid',
+                              gridTemplateColumns: { xs: '1fr', md: '1.7fr 0.8fr 0.8fr 1.2fr' },
+                              gap: 2,
+                              alignItems: 'center',
+                              px: 2,
+                              py: 1.5,
+                              borderTop: '1px solid',
+                              borderColor: 'divider'
+                            }}
                           >
-                            <MenuItem value="" disabled>Select status</MenuItem>
-                            {serviceStatusOptions.map((status) => (
-                              <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
+                            <Box>
+                              <Typography variant="body2" fontWeight={700}>{service.name}</Typography>
+                              <Typography variant="caption" color="text.secondary">{service.category}</Typography>
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {service.estimateMinutes ? `${service.estimateMinutes} min` : '-'}
+                            </Typography>
+                            <Typography variant="body2" fontWeight={700}>{formatCurrency(service.price)}</Typography>
+                            <TextField
+                              select
+                              fullWidth
+                              size="small"
+                              value={serviceStatusValues[service.jobCardServiceId] || ''}
+                              onChange={(event) => handleServiceStatusChange(service, event.target.value)}
+                              disabled={!canEditServiceStatus(service)}
+                            >
+                              <MenuItem value="" disabled>Select status</MenuItem>
+                              {serviceStatusOptions.map((status) => (
+                                <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
+                              ))}
+                            </TextField>
+                          </Box>
+                        ))}
+
+                        {/* Additional Work & Services Sub-section */}
+                        {selectedServices.some(s => s.isAdditional) && (
+                          <>
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                px: 2,
+                                py: 1.25,
+                                bgcolor: '#f0fdf4',
+                                borderTop: '1px solid #bbf7d0',
+                                borderBottom: '1px solid #bbf7d0'
+                              }}
+                            >
+                              <PlusCircle size={15} color="#16a34a" />
+                              <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#15803d', fontSize: '0.8125rem' }}>
+                                Additional Work & Services
+                              </Typography>
+                              <Chip
+                                label={`${selectedServices.filter(s => s.isAdditional).length} Added`}
+                                size="small"
+                                sx={{ bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700, fontSize: '0.7rem', height: 20 }}
+                              />
+                            </Box>
+
+                            {selectedServices.filter(s => s.isAdditional).map((service) => (
+                              <Box
+                                key={service.jobCardServiceId || service.serviceItemId || service.id}
+                                sx={{
+                                  display: 'grid',
+                                  gridTemplateColumns: { xs: '1fr', md: '1.7fr 0.8fr 0.8fr 1.2fr' },
+                                  gap: 2,
+                                  alignItems: 'center',
+                                  px: 2,
+                                  py: 1.5,
+                                  borderTop: '1px solid',
+                                  borderColor: 'divider',
+                                  bgcolor: '#fafafa'
+                                }}
+                              >
+                                <Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="body2" fontWeight={700}>{service.name}</Typography>
+                                    <Chip label="Additional" size="small" sx={{ bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700, fontSize: '0.65rem', height: 18, px: 0.5 }} />
+                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">{service.category}</Typography>
+                                </Box>
+                                <Typography variant="body2" color="text.secondary">
+                                  {service.estimateMinutes ? `${service.estimateMinutes} min` : '-'}
+                                </Typography>
+                                <Typography variant="body2" fontWeight={700}>{formatCurrency(service.price)}</Typography>
+                                <TextField
+                                  select
+                                  fullWidth
+                                  size="small"
+                                  value={serviceStatusValues[service.jobCardServiceId] || ''}
+                                  onChange={(event) => handleServiceStatusChange(service, event.target.value)}
+                                  disabled={!canEditServiceStatus(service)}
+                                >
+                                  <MenuItem value="" disabled>Select status</MenuItem>
+                                  {serviceStatusOptions.map((status) => (
+                                    <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
+                                  ))}
+                                </TextField>
+                              </Box>
                             ))}
-                          </TextField>
-                        </Box>
-                      ))
+                          </>
+                        )}
+                      </>
                     )}
                   </Box>
                 ) : (
@@ -1142,19 +1224,43 @@ export default function JobCardCreate() {
                         <Typography color="text.secondary" variant="body2" fontStyle="italic">No billable services</Typography>
                       </Box>
                     ) : (
-                      activeBillServices.map((item) => (
-                        <Box key={item.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {!isEditMode && (
-                              <IconButton size="small" onClick={() => toggleService(item)} sx={{ color: 'error.main', p: 0.5 }}>
-                                <X size={16} />
-                              </IconButton>
-                            )}
-                            <Typography variant="body2" fontWeight={500}>{item.name} <Typography component="span" variant="caption" color="text.secondary">x1</Typography></Typography>
+                      <>
+                        {/* Regular Bill Services */}
+                        {activeBillServices.filter(item => !item.isAdditional).map((item) => (
+                          <Box key={item.jobCardServiceId || item.serviceItemId || item.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {!isEditMode && (
+                                <IconButton size="small" onClick={() => toggleService(item)} sx={{ color: 'error.main', p: 0.5 }}>
+                                  <X size={16} />
+                                </IconButton>
+                              )}
+                              <Typography variant="body2" fontWeight={500}>{item.name} <Typography component="span" variant="caption" color="text.secondary">x1</Typography></Typography>
+                            </Box>
+                            <Typography variant="body2" fontWeight={600}>{formatCurrency(item.price)}</Typography>
                           </Box>
-                          <Typography variant="body2" fontWeight={600}>{formatCurrency(item.price)}</Typography>
-                        </Box>
-                      ))
+                        ))}
+
+                        {/* Additional Work Bill Services */}
+                        {activeBillServices.some(item => item.isAdditional) && (
+                          <>
+                            <Box sx={{ pt: 2, pb: 0.75, px: 0.5, display: 'flex', alignItems: 'center', gap: 0.75, borderBottom: '1px solid', borderColor: 'divider' }}>
+                              <PlusCircle size={14} color="#16a34a" />
+                              <Typography variant="caption" fontWeight={800} sx={{ color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Additional Work
+                              </Typography>
+                            </Box>
+                            {activeBillServices.filter(item => item.isAdditional).map((item) => (
+                              <Box key={item.jobCardServiceId || item.serviceItemId || item.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#fafafa' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="body2" fontWeight={500}>{item.name} <Typography component="span" variant="caption" color="text.secondary">x1</Typography></Typography>
+                                  <Chip label="Additional" size="small" sx={{ bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700, fontSize: '0.65rem', height: 18, px: 0.5 }} />
+                                </Box>
+                                <Typography variant="body2" fontWeight={600}>{formatCurrency(item.price)}</Typography>
+                              </Box>
+                            ))}
+                          </>
+                        )}
+                      </>
                     )}
                   </Box>
 

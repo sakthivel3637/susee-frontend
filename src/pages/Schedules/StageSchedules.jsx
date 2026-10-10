@@ -105,9 +105,9 @@ export default function StageSchedules() {
       )
     },
     {
-      header: 'Interval',
+      header: 'SLA / Repeat',
       accessor: 'allowedMinutes',
-      render: (row) => `${row.allowedMinutes} min`
+      render: (row) => `${row.allowedMinutes} min${row.repeatIntervalMinutes ? ` (Repeat: ${row.repeatIntervalMinutes}m)` : ''}`
     },
     {
       header: 'Notify',
