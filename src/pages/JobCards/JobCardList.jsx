@@ -53,7 +53,7 @@ export default function JobCardList() {
     all:       '',   // no filter → returns every job card across all statuses
     mechanic:  'MECHANICAL_ASSIGNED,MECHANICAL_IN_PROGRESS',
     bodyshop:  'BODY_SHOP_ASSIGNED,BODY_SHOP_IN_PROGRESS',
-    waterwash: 'WATER_WASH_ASSIGNMENT_PENDING,WATER_WASH_IN_PROGRESS,WATER_WASH_ASSIGNED',
+    waterwash: 'WATER_WASH_IN_PROGRESS,WATER_WASH_ASSIGNED',
     delivery:  'READY_FOR_DELIVERY,READY_FOR_DELIVERED',
   };
   // Mechanic & Body Shop tabs sort by most recently assigned; Delivery tab sorts by creation date; All tab sorts by createdAt
@@ -348,11 +348,10 @@ export default function JobCardList() {
       render: (row) => {
         const statusCode = String(row.currentStatus?.statusCode || row.currentStatus?.code || '').toUpperCase();
         const rowId = String(row.slug || row.id).toLowerCase();
-        const canEditRow = canUpdateJobCards && (
-          activeTab === 'all'
-            ? true
-            : !['READY_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_DELIVERED', 'VEHICLE_DELIVERED', 'REJECTED'].includes(statusCode)
-        );
+        const isNonEditable =
+          ['READY_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_DELIVERED', 'VEHICLE_DELIVERED', 'REJECTED'].includes(statusCode) ||
+          statusCode.includes('DELIVERED');
+        const canEditRow = canUpdateJobCards && !isNonEditable;
 
         if (!canEditRow) return null;
 
@@ -573,9 +572,10 @@ export default function JobCardList() {
           </MenuItem>
         )}
         {canUpdateJobCards &&
-          !['READY_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_DELIVERED', 'VEHICLE_DELIVERED'].includes(
+          !['READY_FOR_DELIVERY', 'DELIVERED', 'READY_FOR_DELIVERED', 'VEHICLE_DELIVERED', 'REJECTED'].includes(
             String(selectedJob?.currentStatus?.statusCode || selectedJob?.currentStatus?.code || '').toUpperCase()
-          ) && (
+          ) &&
+          !String(selectedJob?.currentStatus?.statusCode || selectedJob?.currentStatus?.code || '').toUpperCase().includes('DELIVERED') && (
             <MenuItem onClick={() => { handleMenuClose(); navigate(`${ROUTES.JOB_CARDS}/edit/${String(selectedJob?.slug || selectedJob?.id).toLowerCase()}`, { state: { activeTab } }); }}>
               <Edit size={16} className="mr-3 text-warning" />
               Edit

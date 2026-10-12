@@ -21,7 +21,6 @@ import { getMechanicsDropdownApi } from '../../api/userApi';
 import { adminBayApi } from '../../api/adminBayApi';
 import { getDepartmentFromModules, hasReadableModule } from '../../utils/authAccess';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import Loader from '../../components/common/Loader';
 
 const PRIORITY_OPTIONS = [
@@ -86,6 +85,26 @@ export default function JobCardCreate() {
 
   const selectedCategory = watch('serviceType');
   const assignmentDetails = useMemo(() => jobCard?.workAssignments || [], [jobCard]);
+
+  const getServiceAssignment = useCallback((service) => {
+    if (!service || !Array.isArray(assignmentDetails) || assignmentDetails.length === 0) return null;
+    const sJcId = service.jobCardServiceId || service.id;
+    const sItemId = service.serviceItemId || service.id;
+    const sName = (service.name || service.serviceName || '').trim().toLowerCase();
+
+    const matches = assignmentDetails.filter((a) => {
+      const aJcId = a.jobCardServiceId || a.jobCardService?.id;
+      if (sJcId && aJcId && String(sJcId) === String(aJcId)) return true;
+      const aItemId = a.jobCardService?.serviceItemId || a.service?.serviceItemId;
+      if (sItemId && aItemId && String(sItemId) === String(aItemId)) return true;
+      const aName = (a.jobCardService?.serviceName || a.service?.serviceName || '').trim().toLowerCase();
+      if (sName && aName && sName === aName) return true;
+      return false;
+    });
+
+    if (matches.length === 0) return null;
+    return matches.find((a) => !a.completedAt) || matches[matches.length - 1];
+  }, [assignmentDetails]);
 
   const returnTab = useMemo(() => {
     if (location.state?.activeTab) return location.state.activeTab;
@@ -171,6 +190,15 @@ export default function JobCardCreate() {
       isMounted = false;
     };
   }, [isEditMode]);
+
+  useEffect(() => {
+    if (!isEditMode || !jobCard) return;
+    const jcStatus = String(jobCard?.currentStatus?.statusCode || jobCard?.currentStatus?.code || '').toUpperCase();
+    if (jcStatus.includes('DELIVERED') || jcStatus === 'REJECTED') {
+      toastInfo('Delivered job cards cannot be edited.');
+      navigate(`${ROUTES.JOB_CARDS}/view/${jobCard?.slug || jobCard?.id || jobCardIdentifier}`, { replace: true });
+    }
+  }, [isEditMode, jobCard, navigate, jobCardIdentifier]);
 
   useEffect(() => {
     if (isEditMode && jobCard) {
@@ -967,138 +995,200 @@ export default function JobCardCreate() {
 
                 {isEditMode ? (
                   <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', md: '1.7fr 0.8fr 0.8fr 1.2fr' },
-                        gap: 2,
-                        px: 2,
-                        py: 1.5,
-                        bgcolor: '#F1F5F9'
-                      }}
-                    >
-                      <Typography variant="caption" fontWeight={800} color="text.secondary">SERVICE NAME</Typography>
-                      <Typography variant="caption" fontWeight={800} color="text.secondary">ESTIMATE</Typography>
-                      <Typography variant="caption" fontWeight={800} color="text.secondary">PRICE</Typography>
-                      <Typography variant="caption" fontWeight={800} color="text.secondary">STATUS</Typography>
-                    </Box>
+                    <Box sx={{ overflowX: 'auto' }}>
+                      <Box sx={{ minWidth: 860 }}>
+                        <Box
+                          sx={{
+                            display: 'grid',
+                            gridTemplateColumns: '1.8fr 1.3fr 1.8fr 0.7fr 0.8fr 1.2fr',
+                            gap: 2,
+                            px: 2,
+                            py: 1.5,
+                            bgcolor: '#F1F5F9'
+                          }}
+                        >
+                          <Typography variant="caption" fontWeight={800} color="text.secondary">SERVICE NAME</Typography>
+                          <Typography variant="caption" fontWeight={800} color="text.secondary">ASSIGNED USER</Typography>
+                          <Typography variant="caption" fontWeight={800} color="text.secondary">START & END TIME</Typography>
+                          <Typography variant="caption" fontWeight={800} color="text.secondary">ESTIMATE</Typography>
+                          <Typography variant="caption" fontWeight={800} color="text.secondary">PRICE</Typography>
+                          <Typography variant="caption" fontWeight={800} color="text.secondary">STATUS</Typography>
+                        </Box>
 
-                    {selectedServices.length === 0 ? (
-                      <Box sx={{ p: 3, textAlign: 'center' }}>
-                        <Typography variant="body2" color="text.secondary">No services added for this job card.</Typography>
-                      </Box>
-                    ) : (
-                      <>
-                        {/* Regular Services */}
-                        {selectedServices.filter(s => !s.isAdditional).map((service) => (
-                          <Box
-                            key={service.jobCardServiceId || service.serviceItemId || service.id}
-                            sx={{
-                              display: 'grid',
-                              gridTemplateColumns: { xs: '1fr', md: '1.7fr 0.8fr 0.8fr 1.2fr' },
-                              gap: 2,
-                              alignItems: 'center',
-                              px: 2,
-                              py: 1.5,
-                              borderTop: '1px solid',
-                              borderColor: 'divider'
-                            }}
-                          >
-                            <Box>
-                              <Typography variant="body2" fontWeight={700}>{service.name}</Typography>
-                              <Typography variant="caption" color="text.secondary">{service.category}</Typography>
-                            </Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {service.estimateMinutes ? `${service.estimateMinutes} min` : '-'}
-                            </Typography>
-                            <Typography variant="body2" fontWeight={700}>{formatCurrency(service.price)}</Typography>
-                            <TextField
-                              select
-                              fullWidth
-                              size="small"
-                              value={serviceStatusValues[service.jobCardServiceId] || ''}
-                              onChange={(event) => handleServiceStatusChange(service, event.target.value)}
-                              disabled={!canEditServiceStatus(service)}
-                            >
-                              <MenuItem value="" disabled>Select status</MenuItem>
-                              {serviceStatusOptions.map((status) => (
-                                <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
-                              ))}
-                            </TextField>
+                        {selectedServices.length === 0 ? (
+                          <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Typography variant="body2" color="text.secondary">No services added for this job card.</Typography>
                           </Box>
-                        ))}
-
-                        {/* Additional Work & Services Sub-section */}
-                        {selectedServices.some(s => s.isAdditional) && (
+                        ) : (
                           <>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                px: 2,
-                                py: 1.25,
-                                bgcolor: '#f0fdf4',
-                                borderTop: '1px solid #bbf7d0',
-                                borderBottom: '1px solid #bbf7d0'
-                              }}
-                            >
-                              <PlusCircle size={15} color="#16a34a" />
-                              <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#15803d', fontSize: '0.8125rem' }}>
-                                Additional Work & Services
-                              </Typography>
-                              <Chip
-                                label={`${selectedServices.filter(s => s.isAdditional).length} Added`}
-                                size="small"
-                                sx={{ bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700, fontSize: '0.7rem', height: 20 }}
-                              />
-                            </Box>
-
-                            {selectedServices.filter(s => s.isAdditional).map((service) => (
-                              <Box
-                                key={service.jobCardServiceId || service.serviceItemId || service.id}
-                                sx={{
-                                  display: 'grid',
-                                  gridTemplateColumns: { xs: '1fr', md: '1.7fr 0.8fr 0.8fr 1.2fr' },
-                                  gap: 2,
-                                  alignItems: 'center',
-                                  px: 2,
-                                  py: 1.5,
-                                  borderTop: '1px solid',
-                                  borderColor: 'divider',
-                                  bgcolor: '#fafafa'
-                                }}
-                              >
-                                <Box>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Typography variant="body2" fontWeight={700}>{service.name}</Typography>
-                                    <Chip label="Additional" size="small" sx={{ bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700, fontSize: '0.65rem', height: 18, px: 0.5 }} />
-                                  </Box>
-                                  <Typography variant="caption" color="text.secondary">{service.category}</Typography>
-                                </Box>
-                                <Typography variant="body2" color="text.secondary">
-                                  {service.estimateMinutes ? `${service.estimateMinutes} min` : '-'}
-                                </Typography>
-                                <Typography variant="body2" fontWeight={700}>{formatCurrency(service.price)}</Typography>
-                                <TextField
-                                  select
-                                  fullWidth
-                                  size="small"
-                                  value={serviceStatusValues[service.jobCardServiceId] || ''}
-                                  onChange={(event) => handleServiceStatusChange(service, event.target.value)}
-                                  disabled={!canEditServiceStatus(service)}
+                            {/* Regular Services */}
+                            {selectedServices.filter(s => !s.isAdditional).map((service) => {
+                              const assignment = getServiceAssignment(service);
+                              const assignedUser = assignment?.assignedUser;
+                              return (
+                                <Box
+                                  key={service.jobCardServiceId || service.serviceItemId || service.id}
+                                  sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1.8fr 1.3fr 1.8fr 0.7fr 0.8fr 1.2fr',
+                                    gap: 2,
+                                    alignItems: 'center',
+                                    px: 2,
+                                    py: 1.5,
+                                    borderTop: '1px solid',
+                                    borderColor: 'divider'
+                                  }}
                                 >
-                                  <MenuItem value="" disabled>Select status</MenuItem>
-                                  {serviceStatusOptions.map((status) => (
-                                    <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
-                                  ))}
-                                </TextField>
-                              </Box>
-                            ))}
+                                  <Box>
+                                    <Typography variant="body2" fontWeight={700}>{service.name}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{service.category}</Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography variant="body2" fontWeight={600} sx={{ color: assignedUser ? 'text.primary' : 'text.disabled' }}>
+                                      {assignedUser?.fullName || '-'}
+                                    </Typography>
+                                    {assignedUser?.employeeCode && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                        {assignedUser.employeeCode}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                  {(!assignment?.startedAt && !assignment?.completedAt) ? (
+                                    <Typography variant="body2" color="text.secondary">-</Typography>
+                                  ) : (
+                                    <Box sx={{ whiteSpace: 'nowrap' }}>
+                                      <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                                        <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 600, mr: 0.5 }}>Start:</Box>
+                                        {assignment?.startedAt ? formatDateTime(assignment.startedAt) : '-'}
+                                      </Typography>
+                                      <Typography variant="body2" sx={{ fontSize: '0.8125rem', mt: 0.25 }}>
+                                        <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 600, mr: 0.5 }}>End:</Box>
+                                        {assignment?.completedAt ? formatDateTime(assignment.completedAt) : '-'}
+                                      </Typography>
+                                    </Box>
+                                  )}
+                                  <Typography variant="body2" color="text.secondary">
+                                    {service.estimateMinutes ? `${service.estimateMinutes} min` : '-'}
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight={700}>{formatCurrency(service.price)}</Typography>
+                                  <TextField
+                                    select
+                                    fullWidth
+                                    size="small"
+                                    value={serviceStatusValues[service.jobCardServiceId] || ''}
+                                    onChange={(event) => handleServiceStatusChange(service, event.target.value)}
+                                    disabled={!canEditServiceStatus(service)}
+                                  >
+                                    <MenuItem value="" disabled>Select status</MenuItem>
+                                    {serviceStatusOptions.map((status) => (
+                                      <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
+                                    ))}
+                                  </TextField>
+                                </Box>
+                              );
+                            })}
+
+                            {/* Additional Work & Services Sub-section */}
+                            {selectedServices.some(s => s.isAdditional) && (
+                              <>
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    px: 2,
+                                    py: 1.25,
+                                    bgcolor: '#f0fdf4',
+                                    borderTop: '1px solid #bbf7d0',
+                                    borderBottom: '1px solid #bbf7d0'
+                                  }}
+                                >
+                                  <PlusCircle size={15} color="#16a34a" />
+                                  <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#15803d', fontSize: '0.8125rem' }}>
+                                    Additional Work & Services
+                                  </Typography>
+                                  <Chip
+                                    label={`${selectedServices.filter(s => s.isAdditional).length} Added`}
+                                    size="small"
+                                    sx={{ bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700, fontSize: '0.7rem', height: 20 }}
+                                  />
+                                </Box>
+
+                                {selectedServices.filter(s => s.isAdditional).map((service) => {
+                                  const assignment = getServiceAssignment(service);
+                                  const assignedUser = assignment?.assignedUser;
+                                  return (
+                                    <Box
+                                      key={service.jobCardServiceId || service.serviceItemId || service.id}
+                                      sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1.8fr 1.3fr 1.8fr 0.7fr 0.8fr 1.2fr',
+                                        gap: 2,
+                                        alignItems: 'center',
+                                        px: 2,
+                                        py: 1.5,
+                                        borderTop: '1px solid',
+                                        borderColor: 'divider',
+                                        bgcolor: '#fafafa'
+                                      }}
+                                    >
+                                      <Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <Typography variant="body2" fontWeight={700}>{service.name}</Typography>
+                                          <Chip label="Additional" size="small" sx={{ bgcolor: '#dcfce7', color: '#15803d', fontWeight: 700, fontSize: '0.65rem', height: 18, px: 0.5 }} />
+                                        </Box>
+                                        <Typography variant="caption" color="text.secondary">{service.category}</Typography>
+                                      </Box>
+                                      <Box>
+                                        <Typography variant="body2" fontWeight={600} sx={{ color: assignedUser ? 'text.primary' : 'text.disabled' }}>
+                                          {assignedUser?.fullName || '-'}
+                                        </Typography>
+                                        {assignedUser?.employeeCode && (
+                                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                            {assignedUser.employeeCode}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                      {(!assignment?.startedAt && !assignment?.completedAt) ? (
+                                        <Typography variant="body2" color="text.secondary">-</Typography>
+                                      ) : (
+                                        <Box sx={{ whiteSpace: 'nowrap' }}>
+                                          <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                                            <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 600, mr: 0.5 }}>Start:</Box>
+                                            {assignment?.startedAt ? formatDateTime(assignment.startedAt) : '-'}
+                                          </Typography>
+                                          <Typography variant="body2" sx={{ fontSize: '0.8125rem', mt: 0.25 }}>
+                                            <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 600, mr: 0.5 }}>End:</Box>
+                                            {assignment?.completedAt ? formatDateTime(assignment.completedAt) : '-'}
+                                          </Typography>
+                                        </Box>
+                                      )}
+                                      <Typography variant="body2" color="text.secondary">
+                                        {service.estimateMinutes ? `${service.estimateMinutes} min` : '-'}
+                                      </Typography>
+                                      <Typography variant="body2" fontWeight={700}>{formatCurrency(service.price)}</Typography>
+                                      <TextField
+                                        select
+                                        fullWidth
+                                        size="small"
+                                        value={serviceStatusValues[service.jobCardServiceId] || ''}
+                                        onChange={(event) => handleServiceStatusChange(service, event.target.value)}
+                                        disabled={!canEditServiceStatus(service)}
+                                      >
+                                        <MenuItem value="" disabled>Select status</MenuItem>
+                                        {serviceStatusOptions.map((status) => (
+                                          <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
+                                        ))}
+                                      </TextField>
+                                    </Box>
+                                  );
+                                })}
+                              </>
+                            )}
                           </>
                         )}
-                      </>
-                    )}
+                      </Box>
+                    </Box>
                   </Box>
                 ) : (
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
@@ -1144,95 +1234,6 @@ export default function JobCardCreate() {
                   </Box>
                 )}
               </Card>
-
-              {isEditMode && (
-                <Card sx={{ borderRadius: 3, boxShadow: 0, p: 3, mb: 4 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 3 }}>
-                    <Typography variant="subtitle1" fontWeight={700}>
-                      Assign Work Details
-                    </Typography>
-                    <Chip
-                      label={`${assignmentDetails.length} Assignment${assignmentDetails.length === 1 ? '' : 's'}`}
-                      size="small"
-                      sx={{ fontWeight: 600 }}
-                    />
-                  </Box>
-
-                  {assignmentDetails.length === 0 ? (
-                    <Box sx={{ border: '1px dashed', borderColor: 'divider', borderRadius: 2, p: 3, textAlign: 'center' }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No work assignment added for this job card yet.
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {assignmentDetails.map((assignment) => {
-                        const assignedUser = assignment.assignedUser || {};
-                        const serviceName = assignment.jobCardService?.serviceName || assignment.service?.serviceName || 'Assigned Service';
-
-                        return (
-                          <Box
-                            key={assignment.id}
-                            sx={{
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              borderRadius: 2,
-                              p: 2,
-                              display: 'grid',
-                              gridTemplateColumns: { xs: '1fr', md: '1.4fr 1fr 1fr auto' },
-                              gap: 2,
-                              alignItems: 'center'
-                            }}
-                          >
-                            <Box>
-                              <Typography variant="caption" color="text.secondary" fontWeight={700} textTransform="uppercase">
-                                Assigned User
-                              </Typography>
-                              <Typography variant="body2" fontWeight={700}>
-                                {assignedUser.fullName || 'Unassigned'}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {serviceName}
-                                {assignedUser.employeeCode ? ` - ${assignedUser.employeeCode}` : ''}
-                              </Typography>
-                            </Box>
-
-                            <Box>
-                              <Typography variant="caption" color="text.secondary" fontWeight={700} textTransform="uppercase">
-                                Start Time
-                              </Typography>
-                              <Typography variant="body2" fontWeight={600}>
-                                {assignment.startedAt ? formatDateTime(assignment.startedAt) : '-'}
-                              </Typography>
-                            </Box>
-
-                            <Box>
-                              <Typography variant="caption" color="text.secondary" fontWeight={700} textTransform="uppercase">
-                                End Time
-                              </Typography>
-                              <Typography variant="body2" fontWeight={600}>
-                                {assignment.completedAt ? formatDateTime(assignment.completedAt) : '-'}
-                              </Typography>
-                            </Box>
-
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, whiteSpace: 'nowrap' }}>
-                              <Typography variant="caption" color="text.secondary" fontWeight={700} textTransform="uppercase">
-                                Status
-                              </Typography>
-                              <Chip
-                                label={getAssignmentStatusLabel(assignment)}
-                                color={getAssignmentStatusColor(assignment)}
-                                size="small"
-                                sx={{ fontWeight: 700 }}
-                              />
-                            </Box>
-                          </Box>
-                        );
-                      })}
-                    </Box>
-                  )}
-                </Card>
-              )}
 
               {hasAdditionalDetails && (
                 <Card sx={{ borderRadius: 3, boxShadow: 0, p: 3 }}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Box, Grid, Card, Typography, Divider, Chip, IconButton, FormControl, InputLabel, Select, MenuItem, TextField, Skeleton } from '@mui/material';
 import { ArrowLeft, ArrowRight, Car, User, Shield, FileText, AlertTriangle, PlusCircle, Clock, ChevronDown, ChevronUp, Wrench, Play, Filter, PauseCircle, PlayCircle, Mic, Plus, Minus, MapPin, Maximize2, X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
@@ -24,14 +24,12 @@ export default function JobCardDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: jobCard, isLoading } = useJobCard(jobCardIdentifier);
-  const [expandedAssignmentId, setExpandedAssignmentId] = useState(null);
   const [expandedApprovalIds, setExpandedApprovalIds] = useState({});
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [isPhotoLightboxOpen, setIsPhotoLightboxOpen] = useState(false);
   const [trackerNow, setTrackerNow] = useState(() => Date.now());
   const [isJobProgressOpen, setIsJobProgressOpen] = useState(true);
   const [isTimeTrackerOpen, setIsTimeTrackerOpen] = useState(true);
-  const [isAssignedWorkOpen, setIsAssignedWorkOpen] = useState(true);
   const [isInspectionPhotosOpen, setIsInspectionPhotosOpen] = useState(true);
 
   useEffect(() => {
@@ -108,6 +106,26 @@ export default function JobCardDetailPage() {
     return assignments.filter((assignment) => assignment?.assignedUser || assignment?.jobCardService || assignment?.service);
   }, [jobCard]);
 
+  const getServiceAssignment = useCallback((service) => {
+    if (!service || !Array.isArray(assignmentDetails) || assignmentDetails.length === 0) return null;
+    const sJcId = service.jobCardServiceId || service.id;
+    const sItemId = service.serviceItemId || service.id;
+    const sName = (service.name || service.serviceName || '').trim().toLowerCase();
+
+    const matches = assignmentDetails.filter((a) => {
+      const aJcId = a.jobCardServiceId || a.jobCardService?.id;
+      if (sJcId && aJcId && String(sJcId) === String(aJcId)) return true;
+      const aItemId = a.jobCardService?.serviceItemId || a.service?.serviceItemId;
+      if (sItemId && aItemId && String(sItemId) === String(aItemId)) return true;
+      const aName = (a.jobCardService?.serviceName || a.service?.serviceName || '').trim().toLowerCase();
+      if (sName && aName && sName === aName) return true;
+      return false;
+    });
+
+    if (matches.length === 0) return null;
+    return matches.find((a) => !a.completedAt) || matches[matches.length - 1];
+  }, [assignmentDetails]);
+
   const getAssignmentStatusCode = (assignment) => {
     return String(assignment?.status?.statusCode || assignment?.status?.code || '').toUpperCase();
   };
@@ -181,6 +199,9 @@ export default function JobCardDetailPage() {
     services: Array.isArray(jobCard.services) && typeof jobCard.services[0] === 'string'
       ? jobCard.services.map(s => ({ name: s, price: 0, quantity: 1, status: 'PENDING', isAdditional: false }))
       : (jobCard.services?.map(s => ({
+        id: s.id,
+        jobCardServiceId: s.id,
+        serviceItemId: s.serviceItemId || s.serviceItem?.id || s.id,
         name: s.serviceName || s.serviceItem?.name || 'Unknown Service',
         price: Number(s.price || 0),
         quantity: Number(s.quantity || 1),
@@ -989,35 +1010,84 @@ export default function JobCardDetailPage() {
 
               {/* Selected Initial Services Table */}
               <Box sx={{ overflowX: 'auto' }}>
-                <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <Box component="table" sx={{ width: '100%', minWidth: 780, borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                   <Box component="thead">
                     <Box component="tr" sx={{ bgcolor: 'rgba(18, 52, 59, 0.02)', borderBottom: '1px solid #e2e8f0' }}>
-                      <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary' }}>Service Description</Box>
-                      <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'right', color: 'text.secondary', width: 100 }}>Quantity</Box>
+                      <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary', minWidth: 160 }}>Service Description</Box>
+                      <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary', minWidth: 140 }}>Assigned User</Box>
+                      <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary', minWidth: 180 }}>Start & End Time</Box>
+                      <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'right', color: 'text.secondary', width: 70 }}>Quantity</Box>
                       <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'center', color: 'text.secondary', width: 130 }}>Status</Box>
-                      <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'right', color: 'text.secondary', width: 150 }}>Rate</Box>
+                      <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'right', color: 'text.secondary', width: 110 }}>Rate</Box>
                     </Box>
                   </Box>
                   <Box component="tbody">
                     {defaultServices.length === 0 ? (
                       <Box component="tr">
-                        <Box component="td" colSpan="4" sx={{ p: 3, textAlign: 'center', fontStyle: 'italic', color: 'text.disabled' }}>
+                        <Box component="td" colSpan={6} sx={{ p: 3, textAlign: 'center', fontStyle: 'italic', color: 'text.disabled' }}>
                           No service items registered.
                         </Box>
                       </Box>
                     ) : (
-                      defaultServices.map((service, index) => (
-                        <Box component="tr" key={index} sx={{ borderBottom: index < defaultServices.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                          <Box component="td" sx={{ p: 2, fontWeight: 500 }}>{service.name}</Box>
-                          <Box component="td" sx={{ p: 2, textAlign: 'right', color: 'text.secondary' }}>x{service.quantity || 1}</Box>
-                          <Box component="td" sx={{ p: 2, textAlign: 'center' }}>
-                            <StatusBadge status={service.status} />
+                      defaultServices.map((service, index) => {
+                        const assignment = getServiceAssignment(service);
+                        const assignedUser = assignment?.assignedUser;
+                        return (
+                          <Box component="tr" key={service.id || index} sx={{ borderBottom: index < defaultServices.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                            <Box component="td" sx={{ p: 2, fontWeight: 500 }}>
+                              <Typography variant="body2" fontWeight={600} sx={{ color: '#1e293b' }}>
+                                {service.name}
+                              </Typography>
+                              {service.category && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {typeof service.category === 'string' ? service.category : service.category?.name}
+                                </Typography>
+                              )}
+                            </Box>
+                            <Box component="td" sx={{ p: 2 }}>
+                              {assignedUser ? (
+                                <Box>
+                                  <Typography variant="body2" fontWeight={600} sx={{ color: '#1e293b' }}>
+                                    {assignedUser.fullName || '—'}
+                                  </Typography>
+                                  {assignedUser.employeeCode && (
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                      {assignedUser.employeeCode}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">—</Typography>
+                              )}
+                            </Box>
+                            <Box component="td" sx={{ p: 2 }}>
+                              {(!assignment?.startedAt && !assignment?.completedAt) ? (
+                                <Typography variant="body2" color="text.secondary">—</Typography>
+                              ) : (
+                                <Box sx={{ whiteSpace: 'nowrap' }}>
+                                  <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                                    <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 600, mr: 0.5 }}>Start:</Box>
+                                    {assignment?.startedAt ? formatDateTime(assignment.startedAt) : '—'}
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontSize: '0.8125rem', mt: 0.25 }}>
+                                    <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 600, mr: 0.5 }}>End:</Box>
+                                    {assignment?.completedAt ? formatDateTime(assignment.completedAt) : '—'}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                            <Box component="td" sx={{ p: 2, textAlign: 'right', color: 'text.secondary' }}>
+                              x{service.quantity || 1}
+                            </Box>
+                            <Box component="td" sx={{ p: 2, textAlign: 'center' }}>
+                              <StatusBadge status={service.status} />
+                            </Box>
+                            <Box component="td" sx={{ p: 2, textAlign: 'right', fontWeight: 600 }}>
+                              {formatCurrency(service.price > 0 ? service.price : (index === 0 ? rawTotalSubtotal * 0.6 : rawTotalSubtotal * 0.4 / (defaultServices.length - 1 || 1)))}
+                            </Box>
                           </Box>
-                          <Box component="td" sx={{ p: 2, textAlign: 'right', fontWeight: 600 }}>
-                            {formatCurrency(service.price > 0 ? service.price : (index === 0 ? rawTotalSubtotal * 0.6 : rawTotalSubtotal * 0.4 / (defaultServices.length - 1 || 1)))}
-                          </Box>
-                        </Box>
-                      ))
+                        );
+                      })
                     )}
                   </Box>
                 </Box>
@@ -1031,19 +1101,77 @@ export default function JobCardDetailPage() {
                     <Typography variant="subtitle2" fontWeight={700}>Additional Work & Services</Typography>
                   </Box>
                   <Box sx={{ overflowX: 'auto' }}>
-                    <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                    <Box component="table" sx={{ width: '100%', minWidth: 780, borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                      <Box component="thead">
+                        <Box component="tr" sx={{ bgcolor: 'rgba(18, 52, 59, 0.02)', borderBottom: '1px solid #e2e8f0' }}>
+                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary', minWidth: 160 }}>Service Description</Box>
+                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary', minWidth: 140 }}>Assigned User</Box>
+                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'left', color: 'text.secondary', minWidth: 180 }}>Start & End Time</Box>
+                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'right', color: 'text.secondary', width: 70 }}>Quantity</Box>
+                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'center', color: 'text.secondary', width: 130 }}>Status</Box>
+                          <Box component="th" sx={{ p: 2, fontWeight: 600, textAlign: 'right', color: 'text.secondary', width: 110 }}>Rate</Box>
+                        </Box>
+                      </Box>
                       <Box component="tbody">
-                        {additionalServices.map((service, index) => (
-                          <Box component="tr" key={index} sx={{ borderBottom: index < additionalServices.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                            <Box component="td" sx={{ p: 2, fontWeight: 500 }}>{service.name}</Box>
-                            <Box component="td" sx={{ p: 2, textAlign: 'center' }}>
-                              <StatusBadge status={service.status} />
+                        {additionalServices.map((service, index) => {
+                          const assignment = getServiceAssignment(service);
+                          const assignedUser = assignment?.assignedUser;
+                          return (
+                            <Box component="tr" key={service.id || index} sx={{ borderBottom: index < additionalServices.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                              <Box component="td" sx={{ p: 2, fontWeight: 500 }}>
+                                <Typography variant="body2" fontWeight={600} sx={{ color: '#1e293b' }}>
+                                  {service.name}
+                                </Typography>
+                                {service.category && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    {typeof service.category === 'string' ? service.category : service.category?.name}
+                                  </Typography>
+                                )}
+                              </Box>
+                              <Box component="td" sx={{ p: 2 }}>
+                                {assignedUser ? (
+                                  <Box>
+                                    <Typography variant="body2" fontWeight={600} sx={{ color: '#1e293b' }}>
+                                      {assignedUser.fullName || '—'}
+                                    </Typography>
+                                    {assignedUser.employeeCode && (
+                                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                        {assignedUser.employeeCode}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">—</Typography>
+                                )}
+                              </Box>
+                              <Box component="td" sx={{ p: 2 }}>
+                                {(!assignment?.startedAt && !assignment?.completedAt) ? (
+                                  <Typography variant="body2" color="text.secondary">—</Typography>
+                                ) : (
+                                  <Box sx={{ whiteSpace: 'nowrap' }}>
+                                    <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                                      <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 600, mr: 0.5 }}>Start:</Box>
+                                      {assignment?.startedAt ? formatDateTime(assignment.startedAt) : '—'}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '0.8125rem', mt: 0.25 }}>
+                                      <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 600, mr: 0.5 }}>End:</Box>
+                                      {assignment?.completedAt ? formatDateTime(assignment.completedAt) : '—'}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              </Box>
+                              <Box component="td" sx={{ p: 2, textAlign: 'right', color: 'text.secondary' }}>
+                                x{service.quantity || 1}
+                              </Box>
+                              <Box component="td" sx={{ p: 2, textAlign: 'center' }}>
+                                <StatusBadge status={service.status} />
+                              </Box>
+                              <Box component="td" sx={{ p: 2, textAlign: 'right', fontWeight: 600 }}>
+                                {formatCurrency(service.price)}
+                              </Box>
                             </Box>
-                            <Box component="td" sx={{ p: 2, textAlign: 'right', fontWeight: 600 }}>
-                              {formatCurrency(service.price)}
-                            </Box>
-                          </Box>
-                        ))}
+                          );
+                        })}
                       </Box>
                     </Box>
                   </Box>
@@ -1537,270 +1665,6 @@ export default function JobCardDetailPage() {
                       {remainingPill.text}
                     </Typography>
                   </Box>
-                </Box>
-              )}
-            </Card>
-
-            <Card sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-              <Box
-                onClick={() => setIsAssignedWorkOpen(prev => !prev)}
-                sx={{
-                  p: 2.5,
-                  borderBottom: isAssignedWorkOpen ? '1px solid' : 'none',
-                  borderColor: 'divider',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1,
-                  cursor: 'pointer',
-                  userSelect: 'none'
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#0f172a' }}>Assigned Mechanical Work</Typography>
-                  <Box sx={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    bgcolor: isAssignedWorkOpen ? '#0d9488' : '#e2e8f0',
-                    color: isAssignedWorkOpen ? '#ffffff' : '#475569',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'all 0.2s ease-in-out'
-                  }}>
-                    {isAssignedWorkOpen ? <Minus size={16} /> : <Plus size={16} />}
-                  </Box>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Chip
-                    label={`${assignmentDetails.length} Assignment${assignmentDetails.length === 1 ? '' : 's'}`}
-                    size="small"
-                    sx={{
-                      fontWeight: 700,
-                      bgcolor: '#e0e7ff',
-                      color: '#4338ca',
-                      fontSize: '0.75rem',
-                      px: 0.5
-                    }}
-                  />
-                </Box>
-              </Box>
-              {isAssignedWorkOpen && (
-                <Box sx={{ p: 2.5 }}>
-                  {assignmentDetails.length === 0 ? (
-                    <Box sx={{ border: '1px dashed', borderColor: 'divider', borderRadius: 2, p: 3, textAlign: 'center' }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No mechanical assignment added for this job card yet.
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                      {assignmentDetails.map((assignment, index) => {
-                        const assignedUser = assignment.assignedUser || {};
-                        const serviceName = assignment.jobCardService?.serviceName || assignment.service?.serviceName || 'Assigned Service';
-                        const assignmentId = assignment.id || `assignment-${index}`;
-                        const defaultExpandedId = assignmentDetails[0]?.id || `assignment-0`;
-                        const activeId = expandedAssignmentId !== null ? expandedAssignmentId : defaultExpandedId;
-                        const isExpanded = activeId === assignmentId;
-
-                        const toggleExpanded = () => {
-                          setExpandedAssignmentId(isExpanded ? '' : assignmentId);
-                        };
-
-                        const statusLabel = getAssignmentStatusLabel(assignment);
-                        const statusValue = getAssignmentStatusValue(assignment);
-
-                        return (
-                          <Box
-                            key={assignmentId}
-                            sx={{
-                              border: '1px solid',
-                              borderColor: '#e2e8f0',
-                              borderRadius: '12px',
-                              p: 2.5,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 2,
-                              boxShadow: isExpanded ? '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.025)' : 'none',
-                              bgcolor: '#ffffff',
-                              transition: 'all 0.2s ease-in-out'
-                            }}
-                          >
-                            {/* Top Header Row */}
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                {/* Avatar Icon */}
-                                <Box sx={{
-                                  width: 40,
-                                  height: 40,
-                                  borderRadius: '50%',
-                                  bgcolor: '#eff6ff',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: '#2563eb'
-                                }}>
-                                  <User size={20} />
-                                </Box>
-                                {/* Name & Task */}
-                                <Box>
-                                  <Typography variant="body2" fontWeight={700} sx={{ color: '#1e293b', fontSize: '0.95rem' }}>
-                                    {serviceName}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.25 }}>
-                                    {assignedUser.fullName || 'Unassigned'} {assignedUser.employeeCode ? ` - ${assignedUser.employeeCode}` : ''}
-                                  </Typography>
-                                </Box>
-                              </Box>
-
-                              {/* Status Dot & Chevron */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                {/* Dot Badge */}
-                                <Box sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 0.75,
-                                  bgcolor: statusValue === 'ON_HOLD' ? '#fee2e2' : statusValue === 'COMPLETED' ? '#dcfce7' : statusValue === 'IN_PROGRESS' ? '#eff6ff' : '#ffedd5',
-                                  color: statusValue === 'ON_HOLD' ? '#991b1b' : statusValue === 'COMPLETED' ? '#166534' : statusValue === 'IN_PROGRESS' ? '#1e40af' : '#c2410c',
-                                  px: 1.5,
-                                  py: 0.5,
-                                  borderRadius: '12px',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 700
-                                }}>
-                                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: statusValue === 'ON_HOLD' ? '#b91c1c' : statusValue === 'COMPLETED' ? '#15803d' : statusValue === 'IN_PROGRESS' ? '#1d4ed8' : '#ea580c' }} />
-                                  {statusLabel}
-                                </Box>
-
-                                {/* Collapse/Expand toggle */}
-                                <IconButton
-                                  size="small"
-                                  onClick={toggleExpanded}
-                                  sx={{
-                                    border: '1px solid',
-                                    borderColor: '#e2e8f0',
-                                    borderRadius: '8px',
-                                    p: 0.5,
-                                    color: '#64748b'
-                                  }}
-                                >
-                                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                </IconButton>
-                              </Box>
-                            </Box>
-
-                            {/* Collapsible Content */}
-                            {isExpanded && (
-                              <>
-                                {/* Start Time & End Time Box */}
-                                <Box sx={{
-                                  display: 'grid',
-                                  gridTemplateColumns: '1fr 1fr',
-                                  border: '1px solid',
-                                  borderColor: '#f1f5f9',
-                                  bgcolor: '#f8fafc',
-                                  borderRadius: '12px',
-                                  overflow: 'hidden'
-                                }}>
-                                  {/* Start Time */}
-                                  <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, borderRight: '1px solid', borderColor: '#f1f5f9' }}>
-                                    <Box sx={{ color: '#3b82f6', display: 'flex', alignItems: 'center' }}>
-                                      <Clock size={20} />
-                                    </Box>
-                                    <Box>
-                                      <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem', fontWeight: 500, textTransform: 'uppercase' }}>
-                                        Start Time
-                                      </Typography>
-                                      <Typography variant="body2" fontWeight={700} sx={{ color: '#1e293b', mt: 0.25 }}>
-                                        {assignment.startedAt ? formatDateTime(assignment.startedAt) : 'Not Started'}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-
-                                  {/* End Time */}
-                                  <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box sx={{ color: '#8b5cf6', display: 'flex', alignItems: 'center' }}>
-                                      <Clock size={20} />
-                                    </Box>
-                                    <Box>
-                                      <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem', fontWeight: 500, textTransform: 'uppercase' }}>
-                                        End Time
-                                      </Typography>
-                                      <Typography variant="body2" fontWeight={700} sx={{ color: '#1e293b', mt: 0.25 }}>
-                                        {assignment.completedAt ? formatDateTime(assignment.completedAt) : 'Not Started'}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                </Box>
-
-                                <Divider sx={{ borderColor: '#f1f5f9' }} />
-
-                                {/* Footer Action and Details */}
-                                {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                                <Box sx={{ display: 'flex', gap: 4 }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <ClipboardList size={18} color="#6366f1" />
-                                    <Box>
-                                      <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem' }}>
-                                        Work Order
-                                      </Typography>
-                                      <Typography variant="body2" fontWeight={700} sx={{ color: '#334155' }}>
-                                        {assignedUser.employeeCode || '—'}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Wrench size={18} color="#6366f1" />
-                                    <Box>
-                                      <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem' }}>
-                                        Task
-                                      </Typography>
-                                      <Typography variant="body2" fontWeight={700} sx={{ color: '#334155' }}>
-                                        {serviceName}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                </Box>
-
-                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                  {statusValue === 'ON_HOLD' ? (
-                                    <Button
-                                      size="sm"
-                                      variant="outlined"
-                                      leftIcon={PlayCircle}
-                                      onClick={() => {
-                                        setResumeModal({ isOpen: true, item: { ...assignment, category: assignment.jobCardService?.serviceItem?.category?.slug || assignment.service?.category?.slug || 'mechanical' } });
-                                        setSelectedMechanic('');
-                                        setSelectedBay('');
-                                      }}
-                                      sx={{ borderColor: '#10b981', color: '#10b981', '&:hover': { bgcolor: '#10b981', color: 'white' } }}
-                                    >
-                                      Resume
-                                    </Button>
-                                  ) : (statusValue === 'ASSIGNED' || statusValue === 'IN_PROGRESS') ? (
-                                    <Button
-                                      size="sm"
-                                      variant="outlined"
-                                      leftIcon={PauseCircle}
-                                      onClick={() => {
-                                        setPostponeModal({ isOpen: true, item: assignment });
-                                        setPostponeReason('');
-                                      }}
-                                      sx={{ borderColor: '#f59e0b', color: '#f59e0b', '&:hover': { bgcolor: '#f59e0b', color: 'white' } }}
-                                    >
-                                      Postpone
-                                    </Button>
-                                  ) : null}
-                                </Box>
-                              </Box> */}
-                              </>
-                            )}
-                          </Box>
-                        );
-                      })}
-                    </Box>
-                  )}
                 </Box>
               )}
             </Card>
