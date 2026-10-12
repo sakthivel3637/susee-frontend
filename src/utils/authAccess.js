@@ -63,7 +63,10 @@ const arePathsEquivalent = (requestedPath, menuPath) => {
   }
 
   const reqIsAddWork = ADDITIONAL_WORK_PATHS.some((p) => requestedPath === p || requestedPath.startsWith(`${p}/`));
-  const menuIsAddWork = ADDITIONAL_WORK_PATHS.some((p) => menuPath === p || menuPath.startsWith(`${p}/`));
+  const menuIsAddWork =
+    ADDITIONAL_WORK_PATHS.some((p) => menuPath === p || menuPath.startsWith(`${p}/`)) ||
+    menuPath === '/job-cards' ||
+    menuPath.startsWith('/job-cards/');
 
   if (reqIsAddWork && menuIsAddWork) {
     return true;
@@ -83,11 +86,16 @@ export const hasReadablePath = (modules = [], path) => {
 
 export const hasMenuAction = (modules = [], path, action) => {
   const requestedPath = normalizePath(path);
+  const reqIsAddWork = ADDITIONAL_WORK_PATHS.some((p) => requestedPath === p || requestedPath.startsWith(`${p}/`));
 
   return flattenMenuModules(modules).some((menu) => {
     const menuPath = routePatternToBasePath(menu.path);
     const matches = arePathsEquivalent(requestedPath, menuPath);
     if (!matches) return false;
+
+    if (reqIsAddWork && (menu.canCreate || menu.canUpdate || menu.canRead)) {
+      return true;
+    }
 
     if (menu[action] === true) return true;
     if (menu.canRead === true && (menu[action] === undefined || menu[action] === null || menu[action] === false)) {

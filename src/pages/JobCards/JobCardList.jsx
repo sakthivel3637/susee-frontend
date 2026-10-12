@@ -53,7 +53,7 @@ export default function JobCardList() {
     all:       '',   // no filter → returns every job card across all statuses
     mechanic:  'MECHANICAL_ASSIGNED,MECHANICAL_IN_PROGRESS',
     bodyshop:  'BODY_SHOP_ASSIGNED,BODY_SHOP_IN_PROGRESS',
-    waterwash: '',
+    waterwash: 'WATER_WASH_ASSIGNMENT_PENDING,WATER_WASH_IN_PROGRESS,WATER_WASH_ASSIGNED',
     delivery:  'READY_FOR_DELIVERY,READY_FOR_DELIVERED',
   };
   // Mechanic & Body Shop tabs sort by most recently assigned; Delivery tab sorts by creation date; All tab sorts by createdAt
@@ -214,16 +214,29 @@ export default function JobCardList() {
             header: 'WORK TYPE',
             accessor: 'workType',
             render: (row) => {
-              const type = row.workType || 'Mechanic';
+              const rawType = row.workType || 'Mechanic';
+              const type = rawType === 'Both' ? 'Mech & Body' : rawType;
 
               let chipBg = '#eff6ff';
               let chipColor = '#1d4ed8';
               let chipBorder = '#bfdbfe';
 
-              if (type === 'Both') {
+              if (type === 'All') {
+                chipBg = '#eef2ff';
+                chipColor = '#4f46e5';
+                chipBorder = '#c7d2fe';
+              } else if (type === 'Mech & Body') {
                 chipBg = '#f3e8ff';
                 chipColor = '#7e22ce';
                 chipBorder = '#d8b4fe';
+              } else if (type === 'Mech & Wash') {
+                chipBg = '#f0fdf4';
+                chipColor = '#15803d';
+                chipBorder = '#bbf7d0';
+              } else if (type === 'Body & Wash') {
+                chipBg = '#fffbeb';
+                chipColor = '#b45309';
+                chipBorder = '#fde68a';
               } else if (type === 'Body Shop') {
                 chipBg = '#fff7ed';
                 chipColor = '#c2410c';
