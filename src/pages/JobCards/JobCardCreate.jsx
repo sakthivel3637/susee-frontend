@@ -355,12 +355,20 @@ export default function JobCardCreate() {
 
   const isSavedServiceCompleted = (service) => {
     const code = getSavedServiceStatusCode(service);
-    return ['COMPLETED', 'POSTPONED', 'REJECTED', 'CANCELLED'].some((status) => code.includes(status));
+    return ['COMPLETED', 'REJECTED', 'CANCELLED'].some((status) => code.includes(status));
   };
 
   const isServiceCompletedOrPostponed = (service) => {
     const code = getServiceStatusCode(service);
     return ['COMPLETED', 'POSTPONED', 'REJECTED', 'CANCELLED'].some((status) => code.includes(status));
+  };
+
+  const areAllRepairServicesCompleted = () => {
+    const repairServices = selectedServices.filter((service) => {
+      const dept = getServiceDepartment(service);
+      return dept === 'mechanical' || dept === 'body-shop';
+    });
+    return repairServices.length === 0 || repairServices.every(isSavedServiceCompleted);
   };
 
   const arePreviousDepartmentsCompleted = (department) => {
@@ -375,15 +383,22 @@ export default function JobCardCreate() {
   };
 
   const canEditServiceStatus = (service) => {
-    const roleDepartment = getRoleDepartment();
-    if (roleDepartment === 'all') return !isSavedServiceCompleted(service);
+    if (isSavedServiceCompleted(service)) return false;
 
+    const roleDepartment = getRoleDepartment();
     const serviceDepartment = getServiceDepartment(service);
-    if (serviceDepartment === 'water-wash') return !isSavedServiceCompleted(service);
+
+    // Water Wash status can only be edited once all repair services (mechanical and body-shop) are completed
+    if (serviceDepartment === 'water-wash') {
+      if (!areAllRepairServicesCompleted()) return false;
+      return roleDepartment === 'all' || roleDepartment === 'water-wash';
+    }
+
+    if (roleDepartment === 'all') return true;
+
     return Boolean(roleDepartment)
-      && (roleDepartment === serviceDepartment || roleDepartment === 'all')
-      && arePreviousDepartmentsCompleted(serviceDepartment)
-      && !isSavedServiceCompleted(service);
+      && roleDepartment === serviceDepartment
+      && arePreviousDepartmentsCompleted(serviceDepartment);
   };
 
   const getAssignmentDepartment = (assignment) => {
@@ -408,10 +423,14 @@ export default function JobCardCreate() {
     const activeAssignmentCategory = activeAssignmentDetails.map(getAssignmentDepartment).find(Boolean);
     if (activeAssignmentCategory) return activeAssignmentCategory;
 
-    const uncompletedService = selectedServices.find(s => !isSavedServiceCompleted(s));
-    if (uncompletedService) {
-      const dept = getServiceDepartment(uncompletedService);
-      if (dept) return dept;
+    // Check departments in workflow priority order: mechanical -> body-shop -> water-wash
+    for (const dept of ['mechanical', 'body-shop', 'water-wash']) {
+      const uncompletedInDept = selectedServices.find(
+        (s) => getServiceDepartment(s) === dept && !isSavedServiceCompleted(s)
+      );
+      if (uncompletedInDept) {
+        return dept;
+      }
     }
 
     const selectedServiceCategory = selectedServices.map(getServiceDepartment).find(Boolean);
@@ -950,14 +969,19 @@ export default function JobCardCreate() {
                         const stateTab = String(location.state?.activeTab || location.state?.department || location.state?.category || '').toLowerCase();
                         const jcStatus = String(jobCard?.currentStatus?.statusCode || jobCard?.currentStatus?.code || '').toUpperCase();
                         const jcCategory = String(jobCard?.serviceType || jobCard?.category || '').toLowerCase();
-                        const isWaterWashProcess =
+                        const hasIncompleteRepair = Array.isArray(selectedServices) && selectedServices.some(s => {
+                          const dept = getServiceDepartment(s);
+                          return (dept === 'mechanical' || dept === 'body-shop') && !isSavedServiceCompleted(s);
+                        });
+                        const isWaterWashProcess = !hasIncompleteRepair && (
                           stateTab.includes('water') ||
                           categoryQuery.includes('water') ||
                           fromQuery.includes('water') ||
                           moduleDepartment === 'water-wash' ||
                           jcStatus.includes('WATER_WASH') ||
                           jcCategory.includes('water') ||
-                          (Array.isArray(selectedServices) && selectedServices.some(s => getServiceDepartment(s) === 'water-wash' && !isSavedServiceCompleted(s)));
+                          (Array.isArray(selectedServices) && selectedServices.some(s => getServiceDepartment(s) === 'water-wash' && !isSavedServiceCompleted(s)))
+                        );
                         const isBodyShopProcess =
                           !isWaterWashProcess && (
                             stateTab.includes('body') ||
