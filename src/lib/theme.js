@@ -67,14 +67,17 @@ const theme = createTheme({
           boxShadow: '0 1px 3px rgba(37, 99, 235, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06)',
           '&:hover': {
             background: 'linear-gradient(145deg, #0b275c 0%, #1745ad 50%, #3273dd 100%)',
+            color: '#ffffff !important',
             boxShadow: '0 4px 16px rgba(37, 99, 235, 0.2), 0 2px 4px rgba(0, 0, 0, 0.06)',
           },
         },
         containedSecondary: {
           background: 'linear-gradient(135deg, #0891b2 0%, #3b82f6 100%)',
+          color: '#ffffff',
           boxShadow: 'none',
           '&:hover': {
             background: '#2050B7',
+            color: '#ffffff !important',
             boxShadow: '0 4px 16px rgba(37, 99, 235, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
           },
         },
