@@ -411,7 +411,7 @@ export default function JobCardCreate() {
   };
 
   const activeAssignmentDetails = useMemo(() => {
-    return assignmentDetails.filter((assignment) => !assignment.completedAt);
+    return assignmentDetails.filter((assignment) => !assignment.completedAt && getAssignmentDepartment(assignment) !== 'water-wash');
   }, [assignmentDetails]);
 
   const assignmentCategory = useMemo(() => {
@@ -1068,13 +1068,19 @@ export default function JobCardCreate() {
                                     <Typography variant="caption" color="text.secondary">{service.category}</Typography>
                                   </Box>
                                   <Box>
-                                    <Typography variant="body2" fontWeight={600} sx={{ color: assignedUser ? 'text.primary' : 'text.disabled' }}>
-                                      {assignedUser?.fullName || '-'}
-                                    </Typography>
-                                    {assignedUser?.employeeCode && (
-                                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                        {assignedUser.employeeCode}
-                                      </Typography>
+                                    {(getServiceDepartment(service) !== 'water-wash' && assignedUser) ? (
+                                      <>
+                                        <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
+                                          {assignedUser?.fullName || '-'}
+                                        </Typography>
+                                        {assignedUser?.employeeCode && (
+                                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                            {assignedUser.employeeCode}
+                                          </Typography>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <Typography variant="body2" color="text.secondary">-</Typography>
                                     )}
                                   </Box>
                                   {(!assignment?.startedAt && !assignment?.completedAt) ? (
@@ -1164,13 +1170,19 @@ export default function JobCardCreate() {
                                         <Typography variant="caption" color="text.secondary">{service.category}</Typography>
                                       </Box>
                                       <Box>
-                                        <Typography variant="body2" fontWeight={600} sx={{ color: assignedUser ? 'text.primary' : 'text.disabled' }}>
-                                          {assignedUser?.fullName || '-'}
-                                        </Typography>
-                                        {assignedUser?.employeeCode && (
-                                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                            {assignedUser.employeeCode}
-                                          </Typography>
+                                        {(getServiceDepartment(service) !== 'water-wash' && assignedUser) ? (
+                                          <>
+                                            <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
+                                              {assignedUser?.fullName || '-'}
+                                            </Typography>
+                                            {assignedUser?.employeeCode && (
+                                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                                {assignedUser.employeeCode}
+                                              </Typography>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <Typography variant="body2" color="text.secondary">-</Typography>
                                         )}
                                       </Box>
                                       {(!assignment?.startedAt && !assignment?.completedAt) ? (

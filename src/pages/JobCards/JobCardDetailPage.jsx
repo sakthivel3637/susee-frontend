@@ -294,8 +294,17 @@ export default function JobCardDetailPage() {
     return name.slice(0, 2).toUpperCase();
   };
 
-  const firstAssignment = assignmentDetails[0] || {};
-  const activeAssignment = assignmentDetails.find(a => !a.completedAt) || firstAssignment;
+  const repairAssignments = assignmentDetails.filter((a) => {
+    const cat = String(a.jobCardService?.serviceItem?.category?.slug || a.service?.category?.slug || a.jobCardService?.serviceItem?.category?.name || a.service?.category?.name || '').toLowerCase();
+    if (cat && (cat.includes('water') || cat.includes('wash'))) return false;
+    const bayType = String(a.bay?.bayType || '').toLowerCase();
+    if (bayType.includes('water') || bayType.includes('wash')) return false;
+    const name = String(a.service?.serviceName || a.jobCardService?.serviceName || '').toLowerCase();
+    return !name.includes('water') && !name.includes('wash');
+  });
+
+  const firstAssignment = repairAssignments[0] || {};
+  const activeAssignment = repairAssignments.find(a => !a.completedAt) || firstAssignment;
   const assignedMechanicName = activeAssignment.assignedUser?.fullName || firstAssignment.assignedUser?.fullName || jobCard.technician || jobCard.assignedMechanic?.fullName || 'Unassigned';
   const assignedBayName = activeAssignment.bay?.bayName || activeAssignment.bay?.bayCode || activeAssignment.bay?.name || firstAssignment.bay?.bayName || firstAssignment.bay?.bayCode || firstAssignment.bay?.name || jobCard.bay?.bayName || jobCard.bay?.name || jobCard.assignedBay?.bayName || jobCard.assignedBay?.name || '—';
 
@@ -1045,7 +1054,7 @@ export default function JobCardDetailPage() {
                               )}
                             </Box>
                             <Box component="td" sx={{ p: 2 }}>
-                              {assignedUser ? (
+                              {(!isServiceWaterWash(service) && assignedUser) ? (
                                 <Box>
                                   <Typography variant="body2" fontWeight={600} sx={{ color: '#1e293b' }}>
                                     {assignedUser.fullName || '—'}
@@ -1129,7 +1138,7 @@ export default function JobCardDetailPage() {
                                 )}
                               </Box>
                               <Box component="td" sx={{ p: 2 }}>
-                                {assignedUser ? (
+                                {(!isServiceWaterWash(service) && assignedUser) ? (
                                   <Box>
                                     <Typography variant="body2" fontWeight={600} sx={{ color: '#1e293b' }}>
                                       {assignedUser.fullName || '—'}

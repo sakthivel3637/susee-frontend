@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { User, Printer, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Card, Chip, TextField } from '@mui/material';
 import Button from '../../components/common/Button';
@@ -9,7 +9,7 @@ import PageHeader from '../../components/shared/PageHeader';
 import DataTable from '../../components/common/DataTable';
 import SearchBar from '../../components/common/SearchBar';
 import { toastSuccess, toastInfo, toastError } from '../../notifications/toast';
-import { formatDateTime, formatWaitTime } from '../../utils/formatters';
+import { formatDate, formatDateTime, formatWaitTime } from '../../utils/formatters';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import useAuthStore from '../../store/useAuthStore';
 import { getMechanicalQueueApi, getBodyShopQueueApi, getWaterWashQueueApi, startWaterWashApi, assignQueueWorkApi } from '../../api/queueApi';
@@ -30,13 +30,23 @@ const BAY_TYPE_BY_CATEGORY = {
 
 export default function AssignMechanicList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { role, user, menus } = useAuthStore();
   const locationId = user?.locationId || user?.location_id || user?.branchId || '';
 
   const detectedDept = getDepartmentFromModules(menus);
   const showBothTabs = detectedDept !== 'body-shop';
-  const [activeTab, setActiveTab] = useState('mechanical');
+  const initialTab = location.state?.tab || location.state?.activeTab || 'mechanical';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    const targetTab = location.state?.tab || location.state?.activeTab;
+    if (targetTab && ['mechanical', 'body-shop', 'water-wash'].includes(targetTab)) {
+      setActiveTab(targetTab);
+    }
+  }, [location.state?.tab, location.state?.activeTab]);
+
   const queueCategory = showBothTabs ? activeTab : 'body-shop';
 
   const isBodyShop = queueCategory === 'body-shop';
@@ -146,7 +156,7 @@ export default function AssignMechanicList() {
       }));
       setAssignModal({ isOpen: false, item: null });
 
-      toastSuccess(`Assigned to ${selectedMechanicUser?.fullName || assigneeLabel.toLowerCase()}${selectedBayItem ? ` in ${selectedBayItem.bayName || selectedBayItem.bayCode}` : ''}. Job Card sent to printer!`);
+      toastSuccess(`Assigned to ${selectedMechanicUser?.fullName || assigneeLabel.toLowerCase()}${selectedBayItem ? ` in ${selectedBayItem.bayName || selectedBayItem.bayCode}` : ''}.`);
 
 
     },
@@ -227,14 +237,32 @@ export default function AssignMechanicList() {
     },
     {
       header: 'DELIVERY',
-      render: (row) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <AlertTriangle size={14} color="#f59e0b" />
-          <Typography sx={{ fontSize: '0.875rem', fontWeight: 500, color: '#374151' }}>
-            {row.expectedDeliveryAt ? formatDateTime(row.expectedDeliveryAt) : (row.deliveryDate ? formatDateTime(row.deliveryDate) : '—')}
-          </Typography>
-        </Box>
-      ),
+      render: (row) => {
+        const deliveryVal = row.expectedDeliveryAt || row.deliveryDate;
+        if (!deliveryVal) {
+          return (
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 500, color: '#374151' }}>
+              —
+            </Typography>
+          );
+        }
+
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
+            <Box sx={{ mt: '3px', display: 'flex', alignItems: 'center' }}>
+              <AlertTriangle size={14} color="#f59e0b" />
+            </Box>
+            <Box>
+              <Typography variant="body2" fontWeight={600} sx={{ color: '#0f172a', lineHeight: 1.25 }}>
+                {formatDate(deliveryVal, 'dd MMM yyyy')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 500, mt: 0.25 }}>
+                {formatDate(deliveryVal, 'hh:mm a')}
+              </Typography>
+            </Box>
+          </Box>
+        );
+      },
     },
     ...(canAssignWork ? [{
       header: 'ACTION',

@@ -28,10 +28,11 @@ const PRIORITY_COLORS = {
 
 export default function JobCardList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { menus } = useAuthStore();
   const isWideScreen = useMediaQuery('(min-width: 1400px)');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(location.state?.statusFilter || '');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [fromDate, setFromDate] = useState('');
@@ -64,14 +65,16 @@ export default function JobCardList() {
     waterwash: 'createdAt',
     delivery:  'createdAt',
   };
-  const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'all');
 
   useEffect(() => {
     if (location.state?.activeTab) {
       setActiveTab(location.state.activeTab);
     }
-  }, [location.state?.activeTab]);
+    if (location.state?.statusFilter !== undefined) {
+      setStatusFilter(location.state.statusFilter);
+    }
+  }, [location.state?.activeTab, location.state?.statusFilter]);
 
   // When the status dropdown is used, it overrides the tab filter.
   // For 'all' tab, TAB_STATUS_CODES[activeTab] is '' so no status param is sent.
