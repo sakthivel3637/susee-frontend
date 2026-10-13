@@ -118,7 +118,25 @@ export default function Sidebar() {
   const [hoverAnchorEl, setHoverAnchorEl] = useState(null);
   const [hoveredMenuLabel, setHoveredMenuLabel] = useState(null);
 
-  const menus = buildSidebarMenus(allowedMenus, ICON_MAP);
+  // Original:
+  // const menus = buildSidebarMenus(allowedMenus, ICON_MAP);
+
+  const isMdUser =
+    String(role || "").toLowerCase().replace(/[-_\s]+/g, "") === "md" ||
+    String(role || "").toLowerCase().replace(/[-_\s]+/g, "") === "managingdirector" ||
+    String(user?.role?.slug || "").toLowerCase().replace(/[-_\s]+/g, "") === "md" ||
+    String(user?.role?.slug || "").toLowerCase().replace(/[-_\s]+/g, "") === "managingdirector" ||
+    String(user?.role?.name || "").toLowerCase().replace(/[-_\s]+/g, "") === "managingdirector";
+
+  const rawMenus = buildSidebarMenus(allowedMenus, ICON_MAP);
+  const menus = isMdUser
+    ? rawMenus.filter(
+        (m) =>
+          m.path !== "/roles" &&
+          m.path !== "/md-stage-schedules" &&
+          m.path !== "/gate-entry"
+      )
+    : rawMenus;
 
   const handlePopoverOpen = (event, label) => {
     if (isDesktopFlyout) {

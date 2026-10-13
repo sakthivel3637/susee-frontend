@@ -13,11 +13,50 @@ const routePatternToBasePath = (path) => {
   return dynamicIndex >= 0 ? normalized.slice(0, dynamicIndex) : normalized;
 };
 
+export const isManagingDirectorRole = (role, user) => {
+  const normalizedRole = String(role || '').toLowerCase().replace(/[-_\s]+/g, '');
+  const userSlug = String(user?.role?.slug || '').toLowerCase().replace(/[-_\s]+/g, '');
+  const userName = String(user?.role?.name || '').toLowerCase().replace(/[-_\s]+/g, '');
+
+  return (
+    normalizedRole === 'md' ||
+    normalizedRole === 'managingdirector' ||
+    userSlug === 'md' ||
+    userSlug === 'managingdirector' ||
+    userName === 'managingdirector'
+  );
+};
+
 export const flattenMenuModules = (modules = []) => {
   const flat = [];
 
   const visit = (menus = [], moduleName) => {
     menus.forEach((menu) => {
+      // Exclude Role Management, Stage Schedule, and Vehicle Entry for Managing Director module
+      const isMdModule = normalizeAccessKey(moduleName) === 'managing-director';
+      const cleanPath = normalizePath(menu.path);
+      const isMdHiddenPath =
+        isMdModule &&
+        (cleanPath === '/roles' ||
+          cleanPath.startsWith('/roles/') ||
+          cleanPath === '/md-stage-schedules' ||
+          cleanPath.startsWith('/md-stage-schedules/') ||
+          cleanPath === '/gate-entry' ||
+          cleanPath.startsWith('/gate-entry/'));
+
+      if (isMdHiddenPath) {
+        return;
+      }
+
+      /* Original code without MD screen/menu exclusion:
+      flat.push({
+        ...menu,
+        module: moduleName,
+        path: normalizePath(menu.path),
+        canRead: menu.canRead !== false
+      });
+      */
+
       flat.push({
         ...menu,
         module: moduleName,
@@ -121,6 +160,7 @@ export const getDepartmentFromModules = (modules = []) => {
 export const buildSidebarMenus = (modules = [], iconMap = {}) => {
   return modules
     .map((moduleItem) => {
+      /* Original sourceMenus filter:
       const sourceMenus = (moduleItem.menus || []).filter(
         (menu) =>
           menu.canRead !== false &&
@@ -129,6 +169,27 @@ export const buildSidebarMenus = (modules = [], iconMap = {}) => {
           // Hidden from sidebar menu as additional work is managed directly inside job cards
           menu.path !== '/additional-work' &&
           menu.path !== '/body-shop-additional-work'
+      );
+      */
+      const isMdModule = normalizeAccessKey(moduleItem.module) === 'managing-director';
+      const sourceMenus = (moduleItem.menus || []).filter(
+        (menu) => {
+          if (menu.canRead === false) return false;
+          if (menu.path === '/master-categories') return false;
+          if (menu.path === '/service-centers') return false;
+          // Hidden from sidebar menu as additional work is managed directly inside job cards
+          if (menu.path === '/additional-work' || menu.path === '/body-shop-additional-work') return false;
+          // Hide Role Management, Stage Schedule, and Vehicle Entry for Managing Director module
+          if (
+            isMdModule &&
+            (menu.path === '/roles' ||
+              menu.path === '/md-stage-schedules' ||
+              menu.path === '/gate-entry')
+          ) {
+            return false;
+          }
+          return true;
+        }
       );
       const menuMap = new Map();
 

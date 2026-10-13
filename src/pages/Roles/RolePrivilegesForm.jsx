@@ -96,6 +96,21 @@ const supportsPermissionAction = (menu, type) => {
   return type === "canRead" || !isReadOnlyMenu(menu);
 };
 
+// Filter out Role Management specifically for Managing Director module
+const filterMdRoleManagement = (modules = []) => {
+  return modules.map((mod) => {
+    if (mod.module === "managing-director") {
+      return {
+        ...mod,
+        menus: (mod.menus || []).filter(
+          (menu) => menu.path !== "/roles" && menu.path !== "/roles/privileges"
+        ),
+      };
+    }
+    return mod;
+  });
+};
+
 export default function RolePrivilegesForm() {
   const navigate = useNavigate();
   const { slug } = useParams();
@@ -128,7 +143,9 @@ export default function RolePrivilegesForm() {
             const roleName = role.name;
             setDesignation(roleName);
             const modules = res.data.modules || [];
-            setModulesList(modules);
+            // Original:
+            // setModulesList(modules);
+            setModulesList(filterMdRoleManagement(modules));
 
             if (role.slug && role.slug !== roleIdentifier) {
               navigate(
@@ -169,7 +186,9 @@ export default function RolePrivilegesForm() {
               menus: flattenMenus(mod.menus),
             }));
 
-            setModulesList(mapped);
+            // Original:
+            // setModulesList(mapped);
+            setModulesList(filterMdRoleManagement(mapped));
           }
         }
       } catch (error) {
@@ -266,6 +285,32 @@ export default function RolePrivilegesForm() {
     modulesToSave.forEach((mod) => {
       const isMobile = mobileModules.includes(mod.module);
       mod.menus.forEach((menu) => {
+        // Exclude Role Management menu if module is managing-director
+        if (
+          mod.module === "managing-director" &&
+          (menu.path === "/roles" || menu.path === "/roles/privileges")
+        ) {
+          return;
+        }
+
+        /* Original permission payload push without MD Role Management filter:
+        permissionsPayload.push({
+          menuId: menu.menuId,
+          canRead: isMobile ? true : menu.canRead,
+          canCreate: isMobile
+            ? true
+            : supportsPermissionAction(menu, "canCreate")
+              ? menu.canCreate
+              : false,
+          canUpdate: isMobile
+            ? true
+            : supportsPermissionAction(menu, "canUpdate")
+              ? menu.canUpdate
+              : false,
+          canDelete: false,
+        });
+        */
+
         permissionsPayload.push({
           menuId: menu.menuId,
           canRead: isMobile ? true : menu.canRead,
@@ -522,8 +567,21 @@ export default function RolePrivilegesForm() {
                       (m) => m.module === mod.module,
                     );
 
+                    // Original:
+                    // return mod.menus
+                    //   .filter((menu) => menu.path !== '/additional-work' && menu.path !== '/body-shop-additional-work')
+                    //   .map((menu, menuIndex) => {
+
                     return mod.menus
-                      .filter((menu) => menu.path !== '/additional-work' && menu.path !== '/body-shop-additional-work')
+                      .filter(
+                        (menu) =>
+                          menu.path !== "/additional-work" &&
+                          menu.path !== "/body-shop-additional-work" &&
+                          !(
+                            mod.module === "managing-director" &&
+                            (menu.path === "/roles" || menu.path === "/roles/privileges")
+                          )
+                      )
                       .map((menu, menuIndex) => {
                       const selectableActions = [
                         "canRead",
