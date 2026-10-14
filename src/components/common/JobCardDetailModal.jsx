@@ -1,33 +1,6 @@
 import React from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Box,
-  Typography,
-  Grid,
-  Card,
-  Divider,
-  IconButton,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody
-} from '@mui/material';
-import {
-  X,
-  Car,
-  User,
-  FileText,
-  PlusCircle,
-  Shield,
-  ExternalLink,
-  ArrowRight,
-  Clock,
-  Mic
-} from 'lucide-react';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Grid, Card, Divider, IconButton, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
+import { X, Car, User, FileText, PlusCircle, Shield, ExternalLink, ArrowRight, Clock, Mic } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useJobCard } from '../../queries/useDataQueries';
 import StatusBadge from './StatusBadge';
@@ -338,18 +311,29 @@ export default function JobCardDetailModal({
                       </TableCell>
                     </TableRow>
                   ) : (
-                    defaultServices.map((service, idx) => (
-                      <TableRow key={idx} sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { bgcolor: '#F8FAFC' }, transition: 'background-color 0.2s' }}>
-                        <TableCell sx={{ fontWeight: 600, color: '#1E293B', py: 1.5 }}>{service.name}</TableCell>
-                        <TableCell align="right" sx={{ color: '#64748B', py: 1.5 }}>x{service.quantity || 1}</TableCell>
-                        <TableCell align="center" sx={{ py: 1.5 }}>
-                          <StatusBadge status={service.status} />
-                        </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700, color: '#0F172A', py: 1.5 }}>
-                          {formatCurrency(service.price)}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    defaultServices.map((service, idx) => {
+                      const isRejected = service.status === 'REJECTED' || String(service.status || '').toUpperCase().includes('REJECT');
+                      return (
+                        <TableRow key={idx} sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { bgcolor: '#F8FAFC' }, transition: 'background-color 0.2s' }}>
+                          <TableCell sx={{ fontWeight: 600, color: '#1E293B', py: 1.5 }}>{service.name}</TableCell>
+                          <TableCell align="right" sx={{ color: '#64748B', py: 1.5 }}>x{service.quantity || 1}</TableCell>
+                          <TableCell align="center" sx={{ py: 1.5 }}>
+                            <StatusBadge status={service.status} />
+                          </TableCell>
+                          <TableCell
+                            align="right"
+                            title={isRejected ? 'Deducted from bill because service was rejected' : undefined}
+                            sx={{
+                              fontWeight: 700,
+                              color: isRejected ? '#DC2626' : '#0F172A',
+                              py: 1.5
+                            }}
+                          >
+                            {isRejected ? `(- ${formatCurrency(service.price)})` : formatCurrency(service.price)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -375,17 +359,28 @@ export default function JobCardDetailModal({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {additionalServices.map((service, idx) => (
-                      <TableRow key={idx} sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { bgcolor: '#F8FAFC' }, transition: 'background-color 0.2s' }}>
-                        <TableCell sx={{ fontWeight: 600, color: '#1E293B', py: 1.5 }}>{service.name}</TableCell>
-                        <TableCell align="center" sx={{ py: 1.5 }}>
-                          <StatusBadge status={service.status} />
-                        </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700, color: '#0F172A', py: 1.5 }}>
-                          {formatCurrency(service.price)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {additionalServices.map((service, idx) => {
+                      const isRejected = service.status === 'REJECTED' || String(service.status || '').toUpperCase().includes('REJECT');
+                      return (
+                        <TableRow key={idx} sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { bgcolor: '#F8FAFC' }, transition: 'background-color 0.2s' }}>
+                          <TableCell sx={{ fontWeight: 600, color: '#1E293B', py: 1.5 }}>{service.name}</TableCell>
+                          <TableCell align="center" sx={{ py: 1.5 }}>
+                            <StatusBadge status={service.status} />
+                          </TableCell>
+                          <TableCell
+                            align="right"
+                            title={isRejected ? 'Deducted from bill because service was rejected' : undefined}
+                            sx={{
+                              fontWeight: 700,
+                              color: isRejected ? '#DC2626' : '#0F172A',
+                              py: 1.5
+                            }}
+                          >
+                            {isRejected ? `(- ${formatCurrency(service.price)})` : formatCurrency(service.price)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </Card>

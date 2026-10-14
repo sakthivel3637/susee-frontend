@@ -1,14 +1,6 @@
 import { useState, useMemo } from "react";
 import { useFormContext, Controller } from "react-hook-form";
-import {
-  TextField,
-  MenuItem,
-  Box,
-  Typography,
-  InputAdornment,
-  Checkbox,
-  ListItemText
-} from "@mui/material";
+import { TextField, MenuItem, Box, Typography, InputAdornment, Checkbox, ListItemText } from "@mui/material";
 import { Search } from "lucide-react";
 
 export default function RHFMultiSelect({

@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogActions,
-  Box,
-  Typography,
-  IconButton
-} from '@mui/material';
+import { Dialog, DialogContent, DialogActions, Box, Typography, IconButton } from '@mui/material';
 import { Trash2, X } from 'lucide-react';
 import Button from './Button';
 

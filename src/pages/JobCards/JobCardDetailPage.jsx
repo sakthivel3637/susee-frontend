@@ -1175,8 +1175,19 @@ export default function JobCardDetailPage() {
                               <Box component="td" sx={{ p: 2, textAlign: 'center' }}>
                                 <StatusBadge status={service.status} />
                               </Box>
-                              <Box component="td" sx={{ p: 2, textAlign: 'right', fontWeight: 600 }}>
-                                {formatCurrency(service.price)}
+                              <Box
+                                component="td"
+                                title={(service.status === 'REJECTED' || String(service.status || '').toUpperCase().includes('REJECT')) ? 'Deducted from bill because service was rejected' : undefined}
+                                sx={{
+                                  p: 2,
+                                  textAlign: 'right',
+                                  fontWeight: 600,
+                                  color: (service.status === 'REJECTED' || String(service.status || '').toUpperCase().includes('REJECT')) ? '#dc2626' : 'inherit'
+                                }}
+                              >
+                                {(service.status === 'REJECTED' || String(service.status || '').toUpperCase().includes('REJECT'))
+                                  ? `(- ${formatCurrency(service.price)})`
+                                  : formatCurrency(service.price)}
                               </Box>
                             </Box>
                           );
@@ -1336,11 +1347,19 @@ export default function JobCardDetailPage() {
                                         {srv.serviceName || srv.name}
                                       </Typography>
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                        {srv.price > 0 && (
-                                          <Typography variant="body2" fontWeight={700} sx={{ color: '#334155' }}>
-                                            {formatCurrency(srv.price)}
-                                          </Typography>
-                                        )}
+                                        {srv.price > 0 && (() => {
+                                          const isSrvRejected = ['REJECTED', 'CANCELLED'].includes(String(srv.statusCode || srv.status || approvalStatus || '').toUpperCase());
+                                          return (
+                                            <Typography
+                                              variant="body2"
+                                              fontWeight={700}
+                                              title={isSrvRejected ? 'Deducted from bill because service was rejected' : undefined}
+                                              sx={{ color: isSrvRejected ? '#dc2626' : '#334155' }}
+                                            >
+                                              {isSrvRejected ? `(- ${formatCurrency(srv.price)})` : formatCurrency(srv.price)}
+                                            </Typography>
+                                          );
+                                        })()}
                                         <StatusBadge status={srv.statusCode || srv.status || approvalStatus} />
                                       </Box>
                                     </Box>

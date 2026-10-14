@@ -1,28 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Typography,
-  Box,
-  IconButton,
-  Chip,
-} from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box, IconButton, Chip, } from "@mui/material";
 import { AlertTriangle, X } from "lucide-react";
 import { socket } from "../../../socket/socket";
 import useAuthStore from "../../../store/useAuthStore";
-import {
-  getNotificationsApi,
-  markNotificationReadApi,
-} from "../../../api/notificationApi";
+import { getNotificationsApi, markNotificationReadApi, } from "../../../api/notificationApi";
 
-/**
- * Dynamic Workflow & Redirection Mapping:
- * Maps status codes or stage titles to the target page, department tab, and status filter.
- */
 export function resolveStageRedirection(rawStatusCode, title = "", message = "") {
   const code = String(rawStatusCode || "").toUpperCase();
   const text = `${title} ${message}`.toLowerCase();
@@ -617,9 +600,8 @@ export default function NotificationPopup() {
       <DialogContent sx={{ px: 3, py: 2.5 }}>
         <Typography variant="body2" sx={{ color: "#475569", fontWeight: 500, mb: 1.5 }}>
           {jobCardCount > 0
-            ? `The following ${jobCardCount} ${
-                jobCardCount === 1 ? "job card is" : "job cards are"
-              } waiting in this stage and have exceeded configured time limit:`
+            ? `The following ${jobCardCount} ${jobCardCount === 1 ? "job card is" : "job cards are"
+            } waiting in this stage and have exceeded configured time limit:`
             : current.message || "Stage delay alert notification received."}
         </Typography>
 

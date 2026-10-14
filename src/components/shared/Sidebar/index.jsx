@@ -1,53 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  AlertCircle,
-  Bell,
-  Building,
-  Car,
-  CheckSquare,
-  ChevronDown,
-  ChevronRight,
-  ClipboardList,
-  Clock,
-  Database,
-  Droplets,
-  FileText,
-  LayoutDashboard,
-  LogIn,
-  LogOut,
-  MapPin,
-  Monitor,
-  Package,
-  Paintbrush,
-  Plus,
-  Settings,
-  ShieldCheck,
-  Truck,
-  User,
-  Users,
-  Wrench,
-} from "lucide-react";
-import {
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Collapse,
-  Box,
-  Typography,
-  Divider,
-  IconButton,
-  useTheme,
-  useMediaQuery,
-  Tooltip,
-  Popover,
-  Avatar,
-  Menu,
-  MenuItem,
-} from "@mui/material";
+import { AlertCircle, Bell, Building, Car, CheckSquare, ChevronDown, ChevronRight, ClipboardList, Clock, Database, Droplets, FileText, LayoutDashboard, LogIn, LogOut, MapPin, Monitor, Package, Paintbrush, Plus, Settings, ShieldCheck, Truck, User, Users, Wrench, } from "lucide-react";
+import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Collapse, Box, Typography, Divider, IconButton, useTheme, useMediaQuery, Tooltip, Popover, Avatar, Menu, MenuItem, } from "@mui/material";
 import useAuthStore from "../../../store/useAuthStore";
 import useUIStore from "../../../store/useUIStore";
 import { buildSidebarMenus } from "../../../utils/authAccess";
@@ -131,11 +85,11 @@ export default function Sidebar() {
   const rawMenus = buildSidebarMenus(allowedMenus, ICON_MAP);
   const menus = isMdUser
     ? rawMenus.filter(
-        (m) =>
-          m.path !== "/roles" &&
-          m.path !== "/md-stage-schedules" &&
-          m.path !== "/gate-entry"
-      )
+      (m) =>
+        m.path !== "/roles" &&
+        m.path !== "/md-stage-schedules" &&
+        m.path !== "/gate-entry"
+    )
     : rawMenus;
 
   const handlePopoverOpen = (event, label) => {
@@ -174,8 +128,8 @@ export default function Sidebar() {
         prev[label] !== undefined
           ? prev[label]
           : isGroupActive({
-              children: menus.find((m) => m.label === label)?.children || [],
-            });
+            children: menus.find((m) => m.label === label)?.children || [],
+          });
       return {
         [label]: !isCurrentlyExpanded,
       };

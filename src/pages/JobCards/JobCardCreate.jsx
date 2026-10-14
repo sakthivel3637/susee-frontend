@@ -234,7 +234,9 @@ export default function JobCardCreate() {
           category: service.serviceItem?.category?.name || firstCategory || 'Mechanical',
           serviceStatusId: service.serviceStatusId || service.serviceStatus?.id || '',
           serviceStatusCode: service.serviceStatus?.statusCode || service.serviceStatus?.code || '',
-          isAdditional: Boolean(service.isAdditional)
+          isAdditional: Boolean(service.isAdditional),
+          approvalStatusId: service.approvalStatusId || service.approvalStatus?.id || '',
+          approvalStatusCode: service.approvalStatus?.statusCode || service.approvalStatus?.code || service.approvalStatusCode || ''
         }));
         setSelectedServices(mappedServices);
         setValue('services', mappedServices.map(s => s.serviceItemId || s.id));
@@ -271,6 +273,9 @@ export default function JobCardCreate() {
       const code = String(currentStatus?.code || '').trim().toUpperCase();
       if (code === 'REJECTED' || code === 'CANCELLED') return true;
     }
+    const approvalCode = String(service?.approvalStatusCode || service?.approvalStatus?.statusCode || '').trim().toUpperCase();
+    if (approvalCode === 'REJECTED' || approvalCode === 'CANCELLED') return true;
+
     const fallbackCode = String(service?.serviceStatusCode || '').trim().toUpperCase();
     return fallbackCode === 'REJECTED' || fallbackCode === 'CANCELLED';
   }, [serviceStatusValues, serviceStatusOptions]);
@@ -652,6 +657,15 @@ export default function JobCardCreate() {
 
     const progressingStatuses = ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED'];
     const isProgressingStatus = progressingStatuses.some(status => statusCode.includes(status));
+
+    // Without customer approval, additional work cannot be started or progressed, but CAN be rejected
+    const isUnapprovedAdditional = Boolean(service?.isAdditional) &&
+      String(service?.approvalStatusCode || service?.approvalStatus?.statusCode || '').toUpperCase() !== 'APPROVED';
+
+    if (isUnapprovedAdditional && isProgressingStatus) {
+      toastError('Additional work must be customer approved before it can be started');
+      return;
+    }
 
     if (isProgressingStatus) {
       const serviceDept = getServiceDepartment(service);
@@ -1202,7 +1216,14 @@ export default function JobCardCreate() {
                                       <Typography variant="body2" color="text.secondary">
                                         {service.estimateMinutes ? `${service.estimateMinutes} min` : '-'}
                                       </Typography>
-                                      <Typography variant="body2" fontWeight={700}>{formatCurrency(service.price)}</Typography>
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={700}
+                                        title={isServiceRejectedOrCancelled(service) ? 'Deducted from bill because service was rejected' : undefined}
+                                        sx={{ color: isServiceRejectedOrCancelled(service) ? '#DC2626' : 'inherit' }}
+                                      >
+                                        {isServiceRejectedOrCancelled(service) ? `(- ${formatCurrency(service.price)})` : formatCurrency(service.price)}
+                                      </Typography>
                                       <TextField
                                         select
                                         fullWidth

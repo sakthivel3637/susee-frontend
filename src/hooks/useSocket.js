@@ -13,10 +13,6 @@ const SOCKET_EVENTS = {
   NOTIFICATION_CREATED: 'notification-created',
 };
 
-/**
- * useSocket — connect/disconnect socket, subscribe to events
- * @param {Object} handlers — { eventName: callback }
- */
 export const useSocket = (handlers = {}) => {
   const { isAuthenticated } = useAuthStore();
   useEffect(() => {

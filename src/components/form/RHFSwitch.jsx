@@ -1,10 +1,5 @@
 import { useFormContext, Controller } from "react-hook-form";
-import {
-  FormControlLabel,
-  FormControl,
-  FormHelperText,
-  Switch,
-} from "@mui/material";
+import { FormControlLabel, FormControl, FormHelperText, Switch, } from "@mui/material";
 export default function RHFSwitch({
   name,
   label,

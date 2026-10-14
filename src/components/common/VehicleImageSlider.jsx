@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Box, IconButton, Dialog, DialogContent } from "@mui/material";
-import {
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Play,
-  Pause,
-  ZoomIn,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Play, Pause, ZoomIn, } from "lucide-react";
 import noImage from "../../assets/img/no-image.jpg";
 
 const MOCK_SLIDES = [{ id: 1, src: noImage, alt: "No Image Available" }];
@@ -16,10 +9,10 @@ export default function VehicleImageSlider({ images = [] }) {
   const slides =
     images && images.length > 0
       ? images.map((img, idx) => ({
-          id: img.id,
-          src: img.fileUrl,
-          alt: `Image ${idx + 1}`,
-        }))
+        id: img.id,
+        src: img.fileUrl,
+        alt: `Image ${idx + 1}`,
+      }))
       : MOCK_SLIDES;
 
   const [activeIndex, setActiveIndex] = useState(0);

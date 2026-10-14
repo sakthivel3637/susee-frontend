@@ -363,43 +363,43 @@ export function AdditionalWorkRequestScreen({
 
   const resolvedDomainLabel = domainLabel || (
     isWaterWashDept ? 'Water Wash Additional Work' :
-    isBodyShopDept ? 'Body Shop Additional Work' :
-    'Additional Work'
+      isBodyShopDept ? 'Body Shop Additional Work' :
+        'Additional Work'
   );
   const resolvedSendButtonLabel = sendButtonLabel || (
     isWaterWashDept ? 'Approve Water Wash Work' :
-    isBodyShopDept ? 'Approve Body Shop Work' :
-    'Approve Additional Work'
+      isBodyShopDept ? 'Approve Body Shop Work' :
+        'Approve Additional Work'
   );
   const resolvedBillLabel = additionalBillLabel || (
     isWaterWashDept ? 'Water Wash Additional Work' :
-    isBodyShopDept ? 'Body Shop Additional Work' :
-    'Additional Work'
+      isBodyShopDept ? 'Body Shop Additional Work' :
+        'Additional Work'
   );
   const resolvedSubtitle = subtitle || (
     isWaterWashDept ? 'Review vehicle details, current job card work, then approve one batch for water wash additional work.' :
-    isBodyShopDept ? 'Review vehicle details, current job card work, then approve one batch for body shop additional work.' :
-    'Review the vehicle, current job card, then send one approval batch for the extra work.'
+      isBodyShopDept ? 'Review vehicle details, current job card work, then approve one batch for body shop additional work.' :
+        'Review the vehicle, current job card, then send one approval batch for the extra work.'
   );
   const resolvedSuccessMessage = successMessage || (
     isWaterWashDept ? 'Water wash additional work approved successfully.' :
-    isBodyShopDept ? 'Body shop additional work approved successfully.' :
-    'Additional work approved successfully.'
+      isBodyShopDept ? 'Body shop additional work approved successfully.' :
+        'Additional work approved successfully.'
   );
   const resolvedVehicleTitle = vehicleSectionTitle || (
     isWaterWashDept ? 'Water Wash Vehicle and Customer Details' :
-    isBodyShopDept ? 'Body Shop Vehicle and Customer Details' :
-    'Vehicle and Customer Details'
+      isBodyShopDept ? 'Body Shop Vehicle and Customer Details' :
+        'Vehicle and Customer Details'
   );
   const resolvedCurrentTitle = currentItemsTitle || (
     isWaterWashDept ? 'Current Water Wash Job Items' :
-    isBodyShopDept ? 'Current Body Shop Job Items' :
-    'Current Job Card Items'
+      isBodyShopDept ? 'Current Body Shop Job Items' :
+        'Current Job Card Items'
   );
   const resolvedEmptyMessage = emptyMessage || (
     isWaterWashDept ? 'Open a water wash job card to create additional water wash work against that vehicle.' :
-    isBodyShopDept ? 'Open a body shop job card to create additional body work against that vehicle.' :
-    'Open a job card from the Job Cards action menu to create additional work against that vehicle.'
+      isBodyShopDept ? 'Open a body shop job card to create additional body work against that vehicle.' :
+        'Open a job card from the Job Cards action menu to create additional work against that vehicle.'
   );
 
   const jobCardRaw = context?.jobCard || null;
@@ -745,7 +745,18 @@ export function AdditionalWorkRequestScreen({
                         <Box component="td" sx={{ p: 1.5 }}>
                           <Chip label={service.category} size="small" sx={{ bgcolor: '#EFF6FF', color: '#2563EB', fontWeight: 700 }} />
                         </Box>
-                        <Box component="td" sx={{ p: 1.5, textAlign: 'right', fontWeight: 700 }}>{formatCurrency(service.price)}</Box>
+                        {(() => {
+                          const isRejected = service.status === 'REJECTED' || String(service.status || '').toUpperCase().includes('REJECT');
+                          return (
+                            <Box
+                              component="td"
+                              title={isRejected ? 'Deducted from bill because service was rejected' : undefined}
+                              sx={{ p: 1.5, textAlign: 'right', fontWeight: 700, color: isRejected ? '#DC2626' : 'inherit' }}
+                            >
+                              {isRejected ? `(- ${formatCurrency(service.price)})` : formatCurrency(service.price)}
+                            </Box>
+                          );
+                        })()}
                         <Box component="td" sx={{ p: 1.5 }}>x{service.qty}</Box>
                         <Box component="td" sx={{ p: 1.5 }}><StatusBadge status={service.status} /></Box>
                       </Box>
@@ -856,14 +867,24 @@ export function AdditionalWorkRequestScreen({
                   Previous Job Card Bill
                 </Typography>
                 {currentServices.length ? (
-                  currentServices.map((service) => (
-                    <Box key={service.id} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <Typography variant="body2" sx={{ color: '#334155' }}>
-                        {service.name} <Typography component="span" variant="caption" color="text.secondary">x{service.qty}</Typography>
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 800 }}>{formatCurrency(Number(service.price || 0) * Number(service.qty || 1))}</Typography>
-                    </Box>
-                  ))
+                  currentServices.map((service) => {
+                    const isRejected = service.status === 'REJECTED' || String(service.status || '').toUpperCase().includes('REJECT');
+                    const amt = Number(service.price || 0) * Number(service.qty || 1);
+                    return (
+                      <Box key={service.id} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                          {service.name} <Typography component="span" variant="caption" color="text.secondary">x{service.qty}</Typography>
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          title={isRejected ? 'Deducted from bill because service was rejected' : undefined}
+                          sx={{ fontWeight: 800, color: isRejected ? '#DC2626' : 'inherit' }}
+                        >
+                          {isRejected ? `(- ${formatCurrency(amt)})` : formatCurrency(amt)}
+                        </Typography>
+                      </Box>
+                    );
+                  })
                 ) : (
                   <Typography variant="body2" sx={{ color: '#64748B', fontStyle: 'italic' }}>
                     No previous services found for this job card.

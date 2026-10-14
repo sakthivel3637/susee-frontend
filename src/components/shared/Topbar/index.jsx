@@ -1,49 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-  Bell,
-  ChevronDown,
-  LogOut,
-  User,
-  Settings as SettingsIcon,
-  Menu as MenuIcon,
-  PanelLeftClose,
-  PanelLeft,
-  FileText,
-  Truck,
-  AlertCircle,
-  Info,
-} from "lucide-react";
-import {
-  AppBar,
-  Toolbar,
-  IconButton,
-  Typography,
-  Box,
-  Badge,
-  Menu,
-  MenuItem,
-  Divider,
-  ListItemIcon,
-  ListItemText,
-  useTheme,
-  useMediaQuery,
-} from "@mui/material";
+import { Bell, ChevronDown, LogOut, User, Settings as SettingsIcon, Menu as MenuIcon, PanelLeftClose, PanelLeft, FileText, Truck, AlertCircle, Info, } from "lucide-react";
+import { AppBar, Toolbar, IconButton, Typography, Box, Badge, Menu, MenuItem, Divider, ListItemIcon, ListItemText, useTheme, useMediaQuery, } from "@mui/material";
 import useAuthStore from "../../../store/useAuthStore";
 import useUIStore from "../../../store/useUIStore";
 import { ROUTES } from "../../../config/routes";
 import { getMeApi } from "../../../api/authApi";
-import {
-  getNotificationsApi,
-  getUnreadNotificationCountApi,
-  markNotificationReadApi,
-  markAllNotificationsReadApi,
-} from "../../../api/notificationApi";
-import {
-  removeRegisteredDeviceToken,
-  requestNotificationPermissionAndRegister,
-  setupForegroundMessageListener,
-} from "../../../config/firebase";
+import { getNotificationsApi, getUnreadNotificationCountApi, markNotificationReadApi, markAllNotificationsReadApi, } from "../../../api/notificationApi";
+import { removeRegisteredDeviceToken, requestNotificationPermissionAndRegister, setupForegroundMessageListener, } from "../../../config/firebase";
 import { toastInfo } from "../../../notifications/toast";
 import { usePermissions } from "../../../hooks/usePermissions";
 import { socket, connectSocket } from "../../../socket/socket";
