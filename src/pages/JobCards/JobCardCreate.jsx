@@ -358,6 +358,23 @@ export default function JobCardCreate() {
     return String(currentStatus?.code || service?.serviceStatusCode || '').trim().toUpperCase();
   };
 
+  const getServiceStatusOptionsForService = (service) => {
+    const isWaterWash = getServiceDepartment(service) === 'water-wash';
+    if (!isWaterWash) {
+      return serviceStatusOptions;
+    }
+    const currentVal = (service?.jobCardServiceId ? serviceStatusValues[service.jobCardServiceId] : null) || service?.serviceStatusId;
+    // Water wash has no subsequent service stage, so Postponed cannot be selected
+    return serviceStatusOptions.filter((status) => {
+      const code = String(status.code || status.label || '').toUpperCase();
+      if (code === 'POSTPONED') {
+        // Retain only if it was already saved in DB to avoid select component mismatch
+        return currentVal && String(status.value) === String(currentVal);
+      }
+      return true;
+    });
+  };
+
   const isSavedServiceCompleted = (service) => {
     const code = getSavedServiceStatusCode(service);
     return ['COMPLETED', 'REJECTED', 'CANCELLED'].some((status) => code.includes(status));
@@ -654,6 +671,12 @@ export default function JobCardCreate() {
     const jobCardServiceId = service.jobCardServiceId;
     const selectedStatus = serviceStatusOptions.find(s => String(s.value) === String(statusId));
     const statusCode = selectedStatus?.code?.toUpperCase() || '';
+
+    // Water wash cannot be postponed as there is no subsequent service stage
+    if (statusCode === 'POSTPONED' && getServiceDepartment(service) === 'water-wash') {
+      toastError('Water wash service cannot be postponed as there is no subsequent service stage');
+      return;
+    }
 
     const progressingStatuses = ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED'];
     const isProgressingStatus = progressingStatuses.some(status => statusCode.includes(status));
@@ -1115,7 +1138,17 @@ export default function JobCardCreate() {
                                   <Typography variant="body2" color="text.secondary">
                                     {service.estimateMinutes ? `${service.estimateMinutes} min` : '-'}
                                   </Typography>
+                                  {/* Previously:
                                   <Typography variant="body2" fontWeight={700}>{formatCurrency(service.price)}</Typography>
+                                  */}
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight={700}
+                                    title={isServiceRejectedOrCancelled(service) ? 'Deducted from bill because service was rejected' : undefined}
+                                    sx={{ color: isServiceRejectedOrCancelled(service) ? '#DC2626' : 'inherit' }}
+                                  >
+                                    {isServiceRejectedOrCancelled(service) ? `(- ${formatCurrency(service.price)})` : formatCurrency(service.price)}
+                                  </Typography>
                                   <TextField
                                     select
                                     fullWidth
@@ -1125,7 +1158,8 @@ export default function JobCardCreate() {
                                     disabled={!canEditServiceStatus(service)}
                                   >
                                     <MenuItem value="" disabled>Select status</MenuItem>
-                                    {serviceStatusOptions.map((status) => (
+                                    {/* Previously: {serviceStatusOptions.map((status) => ( */}
+                                    {getServiceStatusOptionsForService(service).map((status) => (
                                       <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
                                     ))}
                                   </TextField>
@@ -1235,7 +1269,8 @@ export default function JobCardCreate() {
                                         disabled={!canEditServiceStatus(service)}
                                       >
                                         <MenuItem value="" disabled>Select status</MenuItem>
-                                        {serviceStatusOptions.map((status) => (
+                                        {/* Previously: {serviceStatusOptions.map((status) => ( */}
+                                        {getServiceStatusOptionsForService(service).map((status) => (
                                           <MenuItem key={status.value} value={status.value}>{status.label}</MenuItem>
                                         ))}
                                       </TextField>

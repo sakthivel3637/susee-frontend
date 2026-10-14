@@ -1092,9 +1092,31 @@ export default function JobCardDetailPage() {
                             <Box component="td" sx={{ p: 2, textAlign: 'center' }}>
                               <StatusBadge status={service.status} />
                             </Box>
-                            <Box component="td" sx={{ p: 2, textAlign: 'right', fontWeight: 600 }}>
-                              {formatCurrency(service.price > 0 ? service.price : (index === 0 ? rawTotalSubtotal * 0.6 : rawTotalSubtotal * 0.4 / (defaultServices.length - 1 || 1)))}
-                            </Box>
+                              {/* Previously:
+                              <Box component="td" sx={{ p: 2, textAlign: 'right', fontWeight: 600 }}>
+                                {formatCurrency(service.price > 0 ? service.price : (index === 0 ? rawTotalSubtotal * 0.6 : rawTotalSubtotal * 0.4 / (defaultServices.length - 1 || 1)))}
+                              </Box>
+                              */}
+                              {(() => {
+                                const itemPrice = service.price > 0 ? service.price : (index === 0 ? rawTotalSubtotal * 0.6 : rawTotalSubtotal * 0.4 / (defaultServices.length - 1 || 1));
+                                const isRejected = ['REJECTED', 'CANCELLED'].includes(String(service.status?.statusCode || service.status || '').toUpperCase()) ||
+                                  String(service.status?.statusCode || service.status || '').toUpperCase().includes('REJECT') ||
+                                  String(service.status?.statusCode || service.status || '').toUpperCase().includes('CANCEL');
+                                return (
+                                  <Box
+                                    component="td"
+                                    title={isRejected ? 'Deducted from bill because service was rejected' : undefined}
+                                    sx={{
+                                      p: 2,
+                                      textAlign: 'right',
+                                      fontWeight: 600,
+                                      color: isRejected ? '#dc2626' : 'inherit'
+                                    }}
+                                  >
+                                    {isRejected ? `(- ${formatCurrency(itemPrice)})` : formatCurrency(itemPrice)}
+                                  </Box>
+                                );
+                              })()}
                           </Box>
                         );
                       })
