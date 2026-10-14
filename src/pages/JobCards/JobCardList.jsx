@@ -99,6 +99,25 @@ export default function JobCardList() {
     sortBy: tabSortBy,
   });
 
+  const [tabCounts, setTabCounts] = useState({
+    all: 0,
+    mechanic: 0,
+    bodyshop: 0,
+    waterwash: 0,
+    delivery: 0,
+  });
+
+  useEffect(() => {
+    if (data?.meta?.tabCounts) {
+      setTabCounts(data.meta.tabCounts);
+    } else if (data?.meta?.total !== undefined) {
+      setTabCounts((prev) => ({
+        ...prev,
+        [activeTab]: data.meta.total,
+      }));
+    }
+  }, [data?.meta?.tabCounts, data?.meta?.total, activeTab]);
+
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
 
@@ -416,10 +435,20 @@ export default function JobCardList() {
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
                 All
-                {activeTab === 'all' && (
-                  <Chip label={data?.meta?.total ?? 0} size="small"
-                    sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#475569', color: '#fff' }} />
-                )}
+                <Chip
+                  label={tabCounts.all ?? 0}
+                  size="small"
+                  sx={{
+                    height: 18,
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    bgcolor: activeTab === 'all' ? '#475569' : '#F1F5F9',
+                    color: activeTab === 'all' ? '#fff' : '#475569',
+                    border: activeTab === 'all' ? 'none' : '1px solid #CBD5E1',
+                    borderRadius: '10px',
+                    transition: 'all 0.2s ease',
+                  }}
+                />
               </Box>
             }
           />
@@ -427,11 +456,21 @@ export default function JobCardList() {
             value="mechanic"
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-               Mechanic Work
-                {activeTab === 'mechanic' && (
-                  <Chip label={data?.meta?.total ?? 0} size="small"
-                    sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#2563eb', color: '#fff' }} />
-                )}
+                Mechanic Work
+                <Chip
+                  label={tabCounts.mechanic ?? 0}
+                  size="small"
+                  sx={{
+                    height: 18,
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    bgcolor: activeTab === 'mechanic' ? '#2563eb' : '#EFF6FF',
+                    color: activeTab === 'mechanic' ? '#fff' : '#1D4ED8',
+                    border: activeTab === 'mechanic' ? 'none' : '1px solid #BFDBFE',
+                    borderRadius: '10px',
+                    transition: 'all 0.2s ease',
+                  }}
+                />
               </Box>
             }
           />
@@ -439,11 +478,21 @@ export default function JobCardList() {
             value="bodyshop"
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-              Body Shop Work
-                {activeTab === 'bodyshop' && (
-                  <Chip label={data?.meta?.total ?? 0} size="small"
-                    sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#c2410c', color: '#fff' }} />
-                )}
+                Body Shop Work
+                <Chip
+                  label={tabCounts.bodyshop ?? 0}
+                  size="small"
+                  sx={{
+                    height: 18,
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    bgcolor: activeTab === 'bodyshop' ? '#c2410c' : '#FFF7ED',
+                    color: activeTab === 'bodyshop' ? '#fff' : '#C2410C',
+                    border: activeTab === 'bodyshop' ? 'none' : '1px solid #FED7AA',
+                    borderRadius: '10px',
+                    transition: 'all 0.2s ease',
+                  }}
+                />
               </Box>
             }
           />
@@ -451,11 +500,21 @@ export default function JobCardList() {
             value="waterwash"
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-              Water Wash Work
-                {activeTab === 'waterwash' && (
-                  <Chip label={data?.meta?.total ?? 0} size="small"
-                    sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#0891b2', color: '#fff' }} />
-                )}
+                Water Wash Work
+                <Chip
+                  label={tabCounts.waterwash ?? 0}
+                  size="small"
+                  sx={{
+                    height: 18,
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    bgcolor: activeTab === 'waterwash' ? '#0891b2' : '#ECFEFF',
+                    color: activeTab === 'waterwash' ? '#fff' : '#0E7490',
+                    border: activeTab === 'waterwash' ? 'none' : '1px solid #A5F3FC',
+                    borderRadius: '10px',
+                    transition: 'all 0.2s ease',
+                  }}
+                />
               </Box>
             }
           />
@@ -463,11 +522,21 @@ export default function JobCardList() {
             value="delivery"
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-             Ready for Delivery
-                {activeTab === 'delivery' && (
-                  <Chip label={data?.meta?.total ?? 0} size="small"
-                    sx={{ height: 18, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#047857', color: '#fff' }} />
-                )}
+                Ready for Delivery
+                <Chip
+                  label={tabCounts.delivery ?? 0}
+                  size="small"
+                  sx={{
+                    height: 18,
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    bgcolor: activeTab === 'delivery' ? '#047857' : '#ECFDF5',
+                    color: activeTab === 'delivery' ? '#fff' : '#047857',
+                    border: activeTab === 'delivery' ? 'none' : '1px solid #A7F3D0',
+                    borderRadius: '10px',
+                    transition: 'all 0.2s ease',
+                  }}
+                />
               </Box>
             }
           />
