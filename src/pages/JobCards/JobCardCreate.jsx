@@ -1082,7 +1082,8 @@ export default function JobCardCreate() {
                                     <Typography variant="caption" color="text.secondary">{service.category}</Typography>
                                   </Box>
                                   <Box>
-                                    {(getServiceDepartment(service) !== 'water-wash' && assignedUser) ? (
+                                    {/* Previously: {(getServiceDepartment(service) !== 'water-wash' && assignedUser) ? ( */}
+                                    {(assignedUser && (getServiceDepartment(service) !== 'water-wash' || assignment?.startedAt || assignment?.completedAt || ['IN_PROGRESS', 'COMPLETED'].includes(service.status?.statusCode || service.status))) ? (
                                       <>
                                         <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
                                           {assignedUser?.fullName || '-'}
@@ -1184,7 +1185,8 @@ export default function JobCardCreate() {
                                         <Typography variant="caption" color="text.secondary">{service.category}</Typography>
                                       </Box>
                                       <Box>
-                                        {(getServiceDepartment(service) !== 'water-wash' && assignedUser) ? (
+                                        {/* Previously: {(getServiceDepartment(service) !== 'water-wash' && assignedUser) ? ( */}
+                                        {(assignedUser && (getServiceDepartment(service) !== 'water-wash' || assignment?.startedAt || assignment?.completedAt || ['IN_PROGRESS', 'COMPLETED'].includes(service.status?.statusCode || service.status))) ? (
                                           <>
                                             <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
                                               {assignedUser?.fullName || '-'}

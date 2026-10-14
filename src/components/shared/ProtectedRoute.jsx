@@ -52,6 +52,24 @@ export default function ProtectedRoute({ allowedModules = [], requiredPath, enfo
     return <Navigate to={ROUTES.MD_DASHBOARD} replace />;
   }
 
+  // Restrict screen access to Role Management for Admin login
+  const isAdmin =
+    String(role || '').toLowerCase().replace(/[-_\s]+/g, '') === 'admin' ||
+    String(role || '').toLowerCase().replace(/[-_\s]+/g, '') === 'superadmin' ||
+    String(user?.role?.slug || '').toLowerCase().replace(/[-_\s]+/g, '') === 'admin' ||
+    String(user?.role?.slug || '').toLowerCase().replace(/[-_\s]+/g, '') === 'superadmin' ||
+    String(user?.role?.name || '').toLowerCase().replace(/[-_\s]+/g, '') === 'admin' ||
+    String(user?.role?.name || '').toLowerCase().replace(/[-_\s]+/g, '') === 'superadmin';
+
+  const isRestrictedAdminScreen =
+    isAdmin &&
+    (currentNormalizedPath === '/roles' ||
+      currentNormalizedPath.startsWith('/roles/'));
+
+  if (isRestrictedAdminScreen) {
+    return <Navigate to={ROUTES.ADMIN_DASHBOARD} replace />;
+  }
+
   if (allowedModules.length > 0 && !hasReadableModule(menus, allowedModules)) {
     return <Navigate to={getFirstReadablePath(menus, ROUTES.PROFILE)} replace />;
   }

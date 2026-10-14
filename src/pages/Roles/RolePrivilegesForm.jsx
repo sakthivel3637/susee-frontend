@@ -96,10 +96,25 @@ const supportsPermissionAction = (menu, type) => {
   return type === "canRead" || !isReadOnlyMenu(menu);
 };
 
-// Filter out Role Management specifically for Managing Director module
+// Filter out Role Management specifically for Managing Director and Admin modules
+/* Original MD Role Management filter:
 const filterMdRoleManagement = (modules = []) => {
   return modules.map((mod) => {
     if (mod.module === "managing-director") {
+      return {
+        ...mod,
+        menus: (mod.menus || []).filter(
+          (menu) => menu.path !== "/roles" && menu.path !== "/roles/privileges"
+        ),
+      };
+    }
+    return mod;
+  });
+};
+*/
+const filterExcludedRoleManagement = (modules = []) => {
+  return modules.map((mod) => {
+    if (mod.module === "managing-director" || mod.module === "admin") {
       return {
         ...mod,
         menus: (mod.menus || []).filter(
@@ -145,7 +160,8 @@ export default function RolePrivilegesForm() {
             const modules = res.data.modules || [];
             // Original:
             // setModulesList(modules);
-            setModulesList(filterMdRoleManagement(modules));
+            // setModulesList(filterMdRoleManagement(modules));
+            setModulesList(filterExcludedRoleManagement(modules));
 
             if (role.slug && role.slug !== roleIdentifier) {
               navigate(
@@ -188,7 +204,8 @@ export default function RolePrivilegesForm() {
 
             // Original:
             // setModulesList(mapped);
-            setModulesList(filterMdRoleManagement(mapped));
+            // setModulesList(filterMdRoleManagement(mapped));
+            setModulesList(filterExcludedRoleManagement(mapped));
           }
         }
       } catch (error) {
@@ -285,9 +302,17 @@ export default function RolePrivilegesForm() {
     modulesToSave.forEach((mod) => {
       const isMobile = mobileModules.includes(mod.module);
       mod.menus.forEach((menu) => {
-        // Exclude Role Management menu if module is managing-director
+        // Exclude Role Management menu if module is managing-director or admin
+        /* Original:
         if (
           mod.module === "managing-director" &&
+          (menu.path === "/roles" || menu.path === "/roles/privileges")
+        ) {
+          return;
+        }
+        */
+        if (
+          (mod.module === "managing-director" || mod.module === "admin") &&
           (menu.path === "/roles" || menu.path === "/roles/privileges")
         ) {
           return;
@@ -572,6 +597,7 @@ export default function RolePrivilegesForm() {
                     //   .filter((menu) => menu.path !== '/additional-work' && menu.path !== '/body-shop-additional-work')
                     //   .map((menu, menuIndex) => {
 
+                    /* Original MD-only filter:
                     return mod.menus
                       .filter(
                         (menu) =>
@@ -579,6 +605,17 @@ export default function RolePrivilegesForm() {
                           menu.path !== "/body-shop-additional-work" &&
                           !(
                             mod.module === "managing-director" &&
+                            (menu.path === "/roles" || menu.path === "/roles/privileges")
+                          )
+                      )
+                    */
+                    return mod.menus
+                      .filter(
+                        (menu) =>
+                          menu.path !== "/additional-work" &&
+                          menu.path !== "/body-shop-additional-work" &&
+                          !(
+                            (mod.module === "managing-director" || mod.module === "admin") &&
                             (menu.path === "/roles" || menu.path === "/roles/privileges")
                           )
                       )

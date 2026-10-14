@@ -122,7 +122,8 @@ export default function AdminDashboard() {
       value: summary.activeRoles || 0,
       icon: ShieldCheck,
       theme: "teal",
-      action: () => navigate(ROUTES.ADMIN_ROLES),
+      // Original:
+      // action: () => navigate(ROUTES.ADMIN_ROLES),
     },
     {
       label: "Service Categories",

@@ -1054,7 +1054,8 @@ export default function JobCardDetailPage() {
                               )}
                             </Box>
                             <Box component="td" sx={{ p: 2 }}>
-                              {(!isServiceWaterWash(service) && assignedUser) ? (
+                              {/* Previously: {(!isServiceWaterWash(service) && assignedUser) ? ( */}
+                              {(assignedUser && (!isServiceWaterWash(service) || assignment?.startedAt || assignment?.completedAt || ['IN_PROGRESS', 'COMPLETED'].includes(service.status?.statusCode || service.status))) ? (
                                 <Box>
                                   <Typography variant="body2" fontWeight={600} sx={{ color: '#1e293b' }}>
                                     {assignedUser.fullName || '—'}
@@ -1138,7 +1139,8 @@ export default function JobCardDetailPage() {
                                 )}
                               </Box>
                               <Box component="td" sx={{ p: 2 }}>
-                                {(!isServiceWaterWash(service) && assignedUser) ? (
+                                {/* Previously: {(!isServiceWaterWash(service) && assignedUser) ? ( */}
+                                {(assignedUser && (!isServiceWaterWash(service) || assignment?.startedAt || assignment?.completedAt || ['IN_PROGRESS', 'COMPLETED'].includes(service.status?.statusCode || service.status))) ? (
                                   <Box>
                                     <Typography variant="body2" fontWeight={600} sx={{ color: '#1e293b' }}>
                                       {assignedUser.fullName || '—'}

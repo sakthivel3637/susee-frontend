@@ -82,7 +82,16 @@ export default function Sidebar() {
     String(user?.role?.slug || "").toLowerCase().replace(/[-_\s]+/g, "") === "managingdirector" ||
     String(user?.role?.name || "").toLowerCase().replace(/[-_\s]+/g, "") === "managingdirector";
 
+  const isAdminUser =
+    String(role || "").toLowerCase().replace(/[-_\s]+/g, "") === "admin" ||
+    String(role || "").toLowerCase().replace(/[-_\s]+/g, "") === "superadmin" ||
+    String(user?.role?.slug || "").toLowerCase().replace(/[-_\s]+/g, "") === "admin" ||
+    String(user?.role?.slug || "").toLowerCase().replace(/[-_\s]+/g, "") === "superadmin" ||
+    String(user?.role?.name || "").toLowerCase().replace(/[-_\s]+/g, "") === "admin" ||
+    String(user?.role?.name || "").toLowerCase().replace(/[-_\s]+/g, "") === "superadmin";
+
   const rawMenus = buildSidebarMenus(allowedMenus, ICON_MAP);
+  /* Original without Admin role management filter:
   const menus = isMdUser
     ? rawMenus.filter(
       (m) =>
@@ -91,6 +100,22 @@ export default function Sidebar() {
         m.path !== "/gate-entry"
     )
     : rawMenus;
+  */
+  const menus = rawMenus.filter((m) => {
+    if (
+      isMdUser &&
+      (m.path === "/roles" ||
+        m.path === "/md-stage-schedules" ||
+        m.path === "/gate-entry")
+    ) {
+      return false;
+    }
+    // Hide Role Management for Admin login
+    if (isAdminUser && (m.path === "/roles" || m.path === "/roles/privileges")) {
+      return false;
+    }
+    return true;
+  });
 
   const handlePopoverOpen = (event, label) => {
     if (isDesktopFlyout) {

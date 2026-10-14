@@ -27,6 +27,21 @@ export const isManagingDirectorRole = (role, user) => {
   );
 };
 
+export const isAdminRole = (role, user) => {
+  const normalizedRole = String(role || '').toLowerCase().replace(/[-_\s]+/g, '');
+  const userSlug = String(user?.role?.slug || '').toLowerCase().replace(/[-_\s]+/g, '');
+  const userName = String(user?.role?.name || '').toLowerCase().replace(/[-_\s]+/g, '');
+
+  return (
+    normalizedRole === 'admin' ||
+    normalizedRole === 'superadmin' ||
+    userSlug === 'admin' ||
+    userSlug === 'superadmin' ||
+    userName === 'admin' ||
+    userName === 'superadmin'
+  );
+};
+
 export const flattenMenuModules = (modules = []) => {
   const flat = [];
 
@@ -45,6 +60,16 @@ export const flattenMenuModules = (modules = []) => {
           cleanPath.startsWith('/gate-entry/'));
 
       if (isMdHiddenPath) {
+        return;
+      }
+
+      // Exclude Role Management for Admin module
+      const isAdminModule = normalizeAccessKey(moduleName) === 'admin';
+      const isAdminHiddenPath =
+        isAdminModule &&
+        (cleanPath === '/roles' || cleanPath.startsWith('/roles/'));
+
+      if (isAdminHiddenPath) {
         return;
       }
 
@@ -172,6 +197,7 @@ export const buildSidebarMenus = (modules = [], iconMap = {}) => {
       );
       */
       const isMdModule = normalizeAccessKey(moduleItem.module) === 'managing-director';
+      const isAdminModule = normalizeAccessKey(moduleItem.module) === 'admin';
       const sourceMenus = (moduleItem.menus || []).filter(
         (menu) => {
           if (menu.canRead === false) return false;
@@ -185,6 +211,13 @@ export const buildSidebarMenus = (modules = [], iconMap = {}) => {
             (menu.path === '/roles' ||
               menu.path === '/md-stage-schedules' ||
               menu.path === '/gate-entry')
+          ) {
+            return false;
+          }
+          // Hide Role Management for Admin module
+          if (
+            isAdminModule &&
+            (menu.path === '/roles' || menu.path === '/roles/privileges')
           ) {
             return false;
           }
